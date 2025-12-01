@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('permissions', function (Blueprint $table) {
             $table->id();
             $table->string('permission_key')->unique();
-            $table->string('module');
+            $table->foreignId('module_id')->constrained('modules')->onDelete('cascade');
             $table->text('descricao')->nullable();
             $table->timestamps();
         });

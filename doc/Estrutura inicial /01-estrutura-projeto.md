@@ -11,6 +11,13 @@ Sass/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/          # Controllers principais (vazio por enquanto)
+            ├── modules/                      # Módulos da aplicação
+            │   └── Auth/                     # Módulo de Autenticação
+            │       ├── Controllers/
+            │       │   └── AuthController.php
+            │       ├── Services/
+            │       │   └── AuthService.php
+│       └── routes.php            # Rotas do módulo
 │   │   └── Middleware/           # Middlewares customizados
 │   │       ├── CheckTenant.php   # Middleware de verificação de tenant
 │   │       └── CheckPermission.php # Middleware de verificação de permissão
@@ -41,13 +48,7 @@ Sass/
 ├── docker/
 │   └── nginx/
 │       └── default.conf          # Configuração do Nginx
-├── modules/                      # Módulos da aplicação
-│   └── Auth/                     # Módulo de Autenticação
-│       ├── Controllers/
-│       │   └── AuthController.php
-│       ├── Services/
-│       │   └── AuthService.php
-│       └── routes.php            # Rotas do módulo
+
 ├── public/
 │   └── index.php                 # Entry point da aplicação
 ├── routes/

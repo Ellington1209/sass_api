@@ -10,17 +10,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
-            'name' => 'Ellington Machado de Paula',
-            'email' => 'ellington1209@gmail.com',
-            'password' => Hash::make('Tonemara89'),
-            'is_super_admin' => true,
-            'tenant_id' => null,
-        ]);
-
-        $this->command->info('Super admin user created successfully!');
-        $this->command->info('Email: ellington@admin.com');
-        $this->command->info('Password: Tonemara89');
+        $this->call(UserSeeder::class);
+        $this->call(ModuleSeeder::class);
+        $this->call(StatusStudentSeeder::class);
+        $this->call(PermissionSeeder::class);
     }
 }
 

@@ -43,5 +43,19 @@ class User extends Authenticatable
         return $this->hasMany(UserPermission::class);
     }
 
+    public function tenantUsers()
+    {
+        return $this->hasMany(TenantUser::class);
+    }
+
+    public function isTenantAdmin(): bool
+    {
+        return $this->tenantUsers()->exists();
+    }
+
+    public function student()
+    {
+        return $this->hasOne(Student::class);
+    }
 }
 

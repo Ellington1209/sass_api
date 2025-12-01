@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Auth\Controllers;
+namespace App\Http\Controllers\modules\Auth;
 
-use Illuminate\Http\Request;
+use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Modules\Auth\Services\AuthService;
 
 class AuthController
 {
@@ -34,7 +34,7 @@ class AuthController
 
         if (!$result) {
             return response()->json([
-                'message' => 'Invalid credentials',
+                'message' => 'Email ou senha inválidos',
             ], 401);
         }
 

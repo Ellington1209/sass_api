@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Tenant extends Model
+class Module extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'key',
         'name',
+        'description',
         'active',
     ];
 
@@ -21,25 +23,13 @@ class Tenant extends Model
         ];
     }
 
-
-    public function users()
-    {
-        return $this->hasMany(User::class);
-    }
-
-    public function tenantUsers()
-    {
-        return $this->hasMany(TenantUser::class);
-    }
-
     public function tenantModules()
     {
         return $this->hasMany(TenantModule::class);
     }
 
-    public function modules()
+    public function tenants()
     {
-        return $this->belongsToMany(Module::class, 'tenant_modules');
+        return $this->belongsToMany(Tenant::class, 'tenant_modules');
     }
 }
-

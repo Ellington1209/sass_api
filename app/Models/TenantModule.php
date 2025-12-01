@@ -2,18 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Permission extends Model
+class TenantModule extends Model
 {
-    use HasFactory;
-
+    protected $table = 'tenant_modules';
+    
     protected $fillable = [
-        'permission_key',
+        'tenant_id',
         'module_id',
-        'descricao',
     ];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 
     public function module()
     {
