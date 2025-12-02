@@ -71,6 +71,7 @@ class StudentController
      */
     public function store(Request $request): JsonResponse
     {
+        
         $tenantId = $request->user()->tenant_id ?? $request->user()->tenantUsers()->first()?->tenant_id;
         
         if (!$tenantId) {

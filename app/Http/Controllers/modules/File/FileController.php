@@ -115,7 +115,6 @@ class FileController
 
             return $this->fileService->response($file->path, $file->mime);
         } catch (\Exception $e) {
-            \Log::error('Erro ao servir arquivo público: ' . $e->getMessage());
             return response()->json(['message' => 'Erro ao carregar arquivo'], 500);
         }
     }
