@@ -29,6 +29,15 @@ class UserSeeder extends Seeder
                 'tenant_id' => null,
             ]
         );
+        User::updateOrCreate(
+            ['email' => 'joao@example.com'],
+            [
+                'name' => 'João da Silva',
+                'password' => Hash::make('123456'),
+                'is_super_admin' => false,
+                'tenant_id' => null,
+            ]
+        );
 
         $this->command->info('Usuários criados com sucesso!');
     }

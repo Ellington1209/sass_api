@@ -26,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.permission' => \App\Http\Middleware\CheckPermission::class,
             'assign.tenant' => \App\Http\Middleware\AssignTenantId::class,
         ]);
+        
+        $middleware->append(\App\Http\Middleware\HandlePutFormData::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -19,7 +19,7 @@ class PermissionSeeder extends Seeder
         })->toArray();
 
         // Verificar se os módulos necessários existem
-        $requiredModules = ['admin', 'cliente', 'estoque', 'financeiro', 'usuario', 'students'];
+        $requiredModules = ['admin', 'cliente', 'estoque', 'financeiro', 'usuario', 'students', 'files'];
         $missingModules = array_diff($requiredModules, array_keys($moduleIds));
         
         if (!empty($missingModules)) {
@@ -343,6 +343,33 @@ class PermissionSeeder extends Seeder
                 'key' => 'students.upload_document',
                 'module_id' => $moduleIds['students'],
                 'description' => 'Upload de documentos de alunos',
+            ],
+
+            // ========== MÓDULO ARQUIVOS ==========
+            [
+                'key' => 'files.view',
+                'module_id' => $moduleIds['files'],
+                'description' => 'Visualizar arquivos',
+            ],
+            [
+                'key' => 'files.upload',
+                'module_id' => $moduleIds['files'],
+                'description' => 'Fazer upload de arquivos',
+            ],
+            [
+                'key' => 'files.delete',
+                'module_id' => $moduleIds['files'],
+                'description' => 'Excluir arquivos',
+            ],
+            [
+                'key' => 'files.download',
+                'module_id' => $moduleIds['files'],
+                'description' => 'Baixar arquivos',
+            ],
+            [
+                'key' => 'files.manage',
+                'module_id' => $moduleIds['files'],
+                'description' => 'Permissão completa de arquivos (todas as ações acima)',
             ],
         ];
     }

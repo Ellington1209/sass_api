@@ -2,19 +2,24 @@
 
 namespace App\Services\Student;
 
+use App\Models\File;
 use App\Models\Student;
 use App\Models\StudentDocument;
 use App\Models\StudentNote;
 use App\Models\User;
 use App\Models\UserPermission;
+use App\Services\FileService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 
 class StudentService
 {
+    public function __construct(
+        private FileService $fileService
+    ) {}
     /**
      * Obtém todos os alunos do tenant com paginação
      */
@@ -104,65 +109,86 @@ class StudentService
             throw new \Exception('Nome e email são obrigatórios para criar o aluno.');
         }
 
-        // Extrai os primeiros 6 dígitos do CPF (remove pontos e traços)
-        $cpfClean = preg_replace('/[^0-9]/', '', $data['cpf']);
-        $password = substr($cpfClean, 0, 6);
+        return DB::transaction(function () use ($tenantId, $data) {
+            // Extrai os primeiros 6 dígitos do CPF (remove pontos e traços)
+            $cpfClean = preg_replace('/[^0-9]/', '', $data['cpf']);
+            $password = substr($cpfClean, 0, 6);
 
-        // Cria o usuário primeiro
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($password),
-            'tenant_id' => $tenantId,
-            'is_super_admin' => false,
-        ]);
+            // Cria o usuário primeiro
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($password),
+                'tenant_id' => $tenantId,
+                'is_super_admin' => false,
+            ]);
 
-        // Associa a permissão padrão de upload de documentos
-        UserPermission::create([
-            'user_id' => $user->id,
-            'permission_key' => 'students.upload_document',
-        ]);
+            // Associa as permissões padrão
+            $permissions = [
+                'students.upload_document',
+                'files.upload',
+                'files.view',
+                'files.download',
+            ];
 
-        // Faz upload da foto se fornecida
-        $photoUrl = null;
-        if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-            $photoUrl = $this->uploadPhoto($data['photo'], $tenantId, $user->id);
-        } elseif (isset($data['photo_url'])) {
-            $photoUrl = $data['photo_url'];
-        }
-
-        // Prepara os dados do aluno
-        $studentData = [
-            'tenant_id' => $tenantId,
-            'user_id' => $user->id,
-            'cpf' => $data['cpf'],
-            'rg' => $data['rg'] ?? null,
-            'birth_date' => $data['birth_date'],
-            'phone' => $data['phone'] ?? null,
-            'address_street' => $data['address_street'] ?? null,
-            'address_number' => $data['address_number'] ?? null,
-            'address_neighborhood' => $data['address_neighborhood'] ?? null,
-            'address_city' => $data['address_city'] ?? null,
-            'address_state' => $data['address_state'] ?? null,
-            'address_zip' => $data['address_zip'] ?? null,
-            'category' => $data['category'] ?? null,
-            'photo_url' => $photoUrl,
-        ];
-
-        // Se não foi informado status_students_id, busca o status padrão (pre-cadastro)
-        if (!isset($data['status_students_id']) || !$data['status_students_id']) {
-            $defaultStatus = \App\Models\StatusStudent::where('key', 'pre-cadastro')->first();
-            if ($defaultStatus) {
-                $studentData['status_students_id'] = $defaultStatus->id;
+            foreach ($permissions as $permission) {
+                UserPermission::create([
+                    'user_id' => $user->id,
+                    'permission_key' => $permission,
+                ]);
             }
-        } else {
-            $studentData['status_students_id'] = $data['status_students_id'];
-        }
-        
-        $student = Student::create($studentData);
-        $student->load(['user', 'statusStudent', 'documents', 'notes.user']);
 
-        return $this->formatStudent($student);
+            // Faz upload da foto se fornecida
+            $photoUrl = null;
+            if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
+                try {
+                    \Log::info('Iniciando upload da foto', ['tenant_id' => $tenantId, 'user_id' => $user->id]);
+                    $photoUrl = $this->uploadPhoto($data['photo'], $tenantId, $user->id);
+                    \Log::info('Upload da foto concluído', ['photo_url' => $photoUrl]);
+                } catch (\Exception $e) {
+                    \Log::error('Erro ao fazer upload da foto', [
+                        'message' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    throw $e;
+                }
+            } elseif (isset($data['photo_url']) && is_string($data['photo_url'])) {
+                $photoUrl = $data['photo_url'];
+            }
+
+            // Prepara os dados do aluno
+            $studentData = [
+                'tenant_id' => $tenantId,
+                'user_id' => $user->id,
+                'cpf' => $data['cpf'],
+                'rg' => $data['rg'] ?? null,
+                'birth_date' => $data['birth_date'],
+                'phone' => $data['phone'] ?? null,
+                'address_street' => $data['address_street'] ?? null,
+                'address_number' => $data['address_number'] ?? null,
+                'address_neighborhood' => $data['address_neighborhood'] ?? null,
+                'address_city' => $data['address_city'] ?? null,
+                'address_state' => $data['address_state'] ?? null,
+                'address_zip' => $data['address_zip'] ?? null,
+                'category' => $data['category'] ?? null,
+                'photo_url' => $photoUrl,
+            ];
+
+            // Se não foi informado status_students_id, busca o status padrão (pre-cadastro)
+            if (!isset($data['status_students_id']) || !$data['status_students_id']) {
+                $defaultStatus = \App\Models\StatusStudent::where('key', 'pre-cadastro')->first();
+                if ($defaultStatus) {
+                    $studentData['status_students_id'] = $defaultStatus->id;
+                }
+            } else {
+                $studentData['status_students_id'] = $data['status_students_id'];
+            }
+            
+            $student = Student::create($studentData);
+            $student->load(['user', 'statusStudent', 'documents', 'notes.user']);
+
+            return $this->formatStudent($student);
+        });
     }
 
     /**
@@ -170,40 +196,83 @@ class StudentService
      */
     public function update(int $id, int $tenantId, array $data): ?array
     {
-        $student = Student::where('id', $id)
-            ->where('tenant_id', $tenantId)
-            ->first();
+        \Log::info('StudentService->update iniciado', [
+            'id' => $id,
+            'tenant_id' => $tenantId,
+            'data_keys' => array_keys($data),
+            'data' => $data
+        ]);
 
-        if (!$student) {
-            return null;
-        }
+        return DB::transaction(function () use ($id, $tenantId, $data) {
+            $student = Student::where('id', $id)
+                ->where('tenant_id', $tenantId)
+                ->first();
 
-        // Remove user_id se estiver presente, pois não pode ser alterado
-        unset($data['user_id']);
-        
-        // Faz upload da foto se fornecida
-        if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-            // Remove foto antiga se existir
-            if ($student->photo_url) {
-                $this->deletePhoto($student->photo_url);
+            if (!$student) {
+                \Log::warning('Aluno não encontrado', ['id' => $id, 'tenant_id' => $tenantId]);
+                return null;
             }
-            $data['photo_url'] = $this->uploadPhoto($data['photo'], $tenantId, $student->user_id);
-            unset($data['photo']); // Remove o arquivo do array antes de atualizar
-        } elseif (isset($data['photo_url'])) {
-            // Se for uma URL, mantém
-        } elseif (isset($data['photo']) && $data['photo'] === null) {
-            // Se enviar null, remove a foto
-            if ($student->photo_url) {
-                $this->deletePhoto($student->photo_url);
-            }
-            $data['photo_url'] = null;
-            unset($data['photo']);
-        }
-        
-        $student->update($data);
-        $student->load(['user', 'statusStudent', 'documents', 'notes.user']);
 
-        return $this->formatStudent($student);
+            \Log::info('Aluno encontrado', [
+                'student_id' => $student->id,
+                'user_id' => $student->user_id,
+                'current_name' => $student->user->name,
+                'current_email' => $student->user->email
+            ]);
+
+            // Atualiza dados do usuário se fornecidos
+            if (isset($data['name']) || isset($data['email'])) {
+                $userData = [];
+                if (isset($data['name'])) {
+                    $userData['name'] = $data['name'];
+                    \Log::info('Atualizando nome do usuário', ['old' => $student->user->name, 'new' => $data['name']]);
+                }
+                if (isset($data['email'])) {
+                    $userData['email'] = $data['email'];
+                    \Log::info('Atualizando email do usuário', ['old' => $student->user->email, 'new' => $data['email']]);
+                }
+                $updated = $student->user->update($userData);
+                \Log::info('Resultado da atualização do usuário', ['updated' => $updated, 'userData' => $userData]);
+                unset($data['name'], $data['email']);
+            }
+
+            // Remove user_id se estiver presente, pois não pode ser alterado
+            unset($data['user_id']);
+            
+            // Faz upload da foto se fornecida
+            if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
+                \Log::info('Upload de nova foto');
+                // Remove foto antiga se existir
+                if ($student->photo_url) {
+                    $this->deletePhoto($student->photo_url);
+                }
+                $data['photo_url'] = $this->uploadPhoto($data['photo'], $tenantId, $student->user_id);
+                unset($data['photo']);
+            } elseif (isset($data['photo']) && $data['photo'] === null) {
+                \Log::info('Removendo foto');
+                // Se enviar null, remove a foto
+                if ($student->photo_url) {
+                    $this->deletePhoto($student->photo_url);
+                }
+                $data['photo_url'] = null;
+                unset($data['photo']);
+            }
+            
+            \Log::info('Dados para atualizar o aluno', ['data' => $data]);
+            $updated = $student->update($data);
+            \Log::info('Resultado da atualização do aluno', ['updated' => $updated]);
+            
+            $student->refresh();
+            $student->load(['user', 'statusStudent', 'documents', 'notes.user']);
+
+            \Log::info('Dados após atualização', [
+                'name' => $student->user->name,
+                'email' => $student->user->email,
+                'cpf' => $student->cpf
+            ]);
+
+            return $this->formatStudent($student);
+        });
     }
 
     /**
@@ -350,7 +419,11 @@ class StudentService
                 'name' => $student->statusStudent->name,
                 'description' => $student->statusStudent->description,
             ] : null,
-            'photo_url' => $student->photo_url,
+            'photo_url' => $student->photo_url ? (
+                str_starts_with($student->photo_url, 'tenants/') 
+                    ? url('/api/files/public/' . urlencode($student->photo_url))
+                    : $student->photo_url
+            ) : null,
             'documents' => $student->documents->map(function ($doc) {
                 return [
                     'id' => $doc->id,
@@ -379,51 +452,50 @@ class StudentService
     }
 
     /**
-     * Faz upload da foto do aluno
-     * Por enquanto salva no storage local, mas pode ser facilmente migrado para S3
+     * Faz upload da foto do aluno no B2
      * 
      * @param UploadedFile $file
      * @param int $tenantId
      * @param int $userId
-     * @return string URL da foto salva
+     * @return string URL temporária da foto salva
      */
     private function uploadPhoto(UploadedFile $file, int $tenantId, int $userId): string
     {
-        // Valida o arquivo
+        \Log::info('Validando arquivo de foto', [
+            'mime' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'name' => $file->getClientOriginalName()
+        ]);
+
         $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         if (!in_array($file->getMimeType(), $allowedMimes)) {
             throw new \Exception('Tipo de arquivo não permitido. Use apenas imagens (JPEG, PNG, GIF, WEBP).');
         }
 
-        // Tamanho máximo: 5MB
         if ($file->getSize() > 5 * 1024 * 1024) {
             throw new \Exception('Arquivo muito grande. Tamanho máximo: 5MB.');
         }
 
-        // Gera nome único para o arquivo
-        $fileName = 'student_' . $userId . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        \Log::info('Chamando FileService->upload');
+        $fileRecord = $this->fileService->upload($file, $tenantId, 'avatar', $userId);
+        \Log::info('FileService->upload concluído', ['file_id' => $fileRecord->id, 'path' => $fileRecord->path]);
         
-        // Caminho: storage/app/public/students/{tenant_id}/{filename}
-        $path = $file->storeAs('students/' . $tenantId, $fileName, 'public');
-
-        // Retorna a URL pública
-        return Storage::url($path);
+        return $fileRecord->path;
     }
 
     /**
-     * Remove a foto do aluno
+     * Remove a foto do aluno do B2
      * 
-     * @param string $photoUrl
+     * @param string $photoPath
      * @return void
      */
-    private function deletePhoto(string $photoUrl): void
+    private function deletePhoto(string $photoPath): void
     {
-        // Remove /storage/ da URL para obter o caminho relativo
-        $path = str_replace('/storage/', '', parse_url($photoUrl, PHP_URL_PATH));
-        
-        // Se o arquivo existe no storage público, remove
-        if (Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        $file = File::where('path', $photoPath)->first();
+
+        if ($file) {
+            $this->fileService->delete($file->path);
+            $file->delete();
         }
     }
 }

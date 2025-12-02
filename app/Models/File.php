@@ -6,21 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class StudentNote extends Model
+class File extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'student_id',
         'tenant_id',
         'user_id',
-        'note',
+        'type',
+        'path',
+        'original_name',
+        'mime',
+        'size',
     ];
-
-    public function student(): BelongsTo
-    {
-        return $this->belongsTo(Student::class);
-    }
 
     public function tenant(): BelongsTo
     {

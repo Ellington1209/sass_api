@@ -3,6 +3,7 @@
 use App\Http\Controllers\modules\Admin\Module\ModuleController;
 use App\Http\Controllers\modules\Admin\Tenant\TenantController;
 use App\Http\Controllers\modules\Auth\AuthController;
+use App\Http\Controllers\modules\File\FileController;
 use App\Http\Controllers\modules\Student\StatusStudentController;
 use App\Http\Controllers\modules\Student\StudentController;
 use App\Http\Controllers\modules\User\UserController;
@@ -11,6 +12,10 @@ use Illuminate\Support\Facades\Route;
 // Rotas públicas (sem autenticação)
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+});
+
+Route::prefix('files')->group(function () {
+    Route::get('/public/{path}', [FileController::class, 'showPublic'])->where('path', '.*');
 });
 
 // Rotas que requerem autenticação
@@ -69,6 +74,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Rotas de observações
         Route::post('/{id}/notes', [StudentController::class, 'addNote'])->middleware('check.permission:students.edit');
         Route::delete('/{id}/notes/{noteId}', [StudentController::class, 'removeNote'])->middleware('check.permission:students.edit');
+    });
+
+    // Rotas de Arquivos
+    Route::prefix('files')->group(function () {
+        Route::post('/upload', [FileController::class, 'upload'])->middleware('check.permission:files.upload');
+        Route::get('/show/{path}', [FileController::class, 'show'])->where('path', '.*')->middleware('check.permission:files.view');
+        Route::get('/{id}/url', [FileController::class, 'showUrl'])->middleware('check.permission:files.download');
+        Route::delete('/{id}/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete');
     });
 });
 

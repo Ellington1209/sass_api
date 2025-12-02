@@ -46,6 +46,12 @@ class ModuleSeeder extends Seeder
                 'description' => 'Gerenciamento de alunos e seus dados',
                 'active' => true,
             ],
+            [
+                'key' => 'files',
+                'name' => 'Arquivos',
+                'description' => 'Gerenciamento de arquivos e uploads',
+                'active' => true,
+            ],
             
         ];
 

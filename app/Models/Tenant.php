@@ -41,5 +41,10 @@ class Tenant extends Model
     {
         return $this->belongsToMany(Module::class, 'tenant_modules');
     }
+
+    public function files()
+    {
+        return $this->hasMany(File::class);
+    }
 }
 
