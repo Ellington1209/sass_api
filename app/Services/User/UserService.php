@@ -3,18 +3,27 @@
 namespace App\Services\User;
 
 use App\Models\User;
+use App\Models\Student;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UserService
 {
     /**
      * Obtém todos os usuários
+     * @param int|null $tenantId Se null, retorna todos (apenas para super-admin)
      */
-    public function getAll(): Collection
+    public function getAll(?int $tenantId = null): Collection
     {
-        return User::with(['tenant', 'userPermissions'])
-            ->orderBy('name')
+        $query = User::with(['tenant', 'userPermissions']);
+
+        // Se tenant_id foi fornecido, filtra por ele
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query->orderBy('name')
             ->get()
             ->map(function ($user) {
                 return $this->formatUser($user);
@@ -23,10 +32,18 @@ class UserService
 
     /**
      * Obtém um usuário por ID
+     * @param int|null $tenantId Se null, busca em todos os tenants (apenas para super-admin)
      */
-    public function getById(int $id): ?array
+    public function getById(int $id, ?int $tenantId = null): ?array
     {
-        $user = User::with(['tenant', 'userPermissions'])->find($id);
+        $query = User::with(['tenant', 'userPermissions'])->where('id', $id);
+
+        // Se tenant_id foi fornecido, filtra por ele
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        $user = $query->first();
 
         if (!$user) {
             return null;
@@ -55,10 +72,18 @@ class UserService
 
     /**
      * Atualiza um usuário
+     * @param int|null $tenantId Se null, busca em todos os tenants (apenas para super-admin)
      */
-    public function update(int $id, array $data): ?array
+    public function update(int $id, ?int $tenantId = null, array $data): ?array
     {
-        $user = User::find($id);
+        $query = User::where('id', $id);
+
+        // Se tenant_id foi fornecido, filtra por ele
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        $user = $query->first();
 
         if (!$user) {
             return null;
@@ -81,22 +106,70 @@ class UserService
     }
 
     /**
-     * Exclui um usuário
+     * Exclui um ou vários usuários (soft delete)
+     * @param int|array $ids ID único ou array de IDs
+     * @param int|null $tenantId Se null, busca em todos os tenants (apenas para super-admin)
      */
-    public function delete(int $id): bool
+    public function delete(int|array $ids, ?int $tenantId = null): array
     {
-        $user = User::find($id);
+        // Normaliza para array
+        $idsArray = is_array($ids) ? $ids : [$ids];
+        
+        // Converte para inteiros
+        $idsArray = array_map('intval', $idsArray);
 
-        if (!$user) {
-            return false;
+        $query = User::whereIn('id', $idsArray);
+
+        // Se tenant_id foi fornecido, filtra por ele
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
         }
 
-        // Não permite excluir super admin
-        if ($user->is_super_admin) {
-            throw new \Exception('Não é possível excluir um super administrador.');
+        $users = $query->get();
+
+        if ($users->isEmpty()) {
+            return [
+                'deleted' => [],
+                'not_found' => $idsArray,
+                'errors' => [],
+            ];
         }
 
-        return $user->delete();
+        $deleted = [];
+        $notFound = [];
+        $errors = [];
+
+        foreach ($users as $user) {
+            // Não permite excluir super admin
+            if ($user->is_super_admin) {
+                $errors[] = [
+                    'id' => $user->id,
+                    'message' => 'Não é possível excluir um super administrador.',
+                ];
+                continue;
+            }
+
+            // Aplica soft delete em cascata
+            DB::transaction(function () use ($user) {
+                // Soft delete de todos os students relacionados ao user
+                Student::where('user_id', $user->id)->delete();
+                
+                // Soft delete do user
+                $user->delete();
+            });
+
+            $deleted[] = $user->id;
+        }
+
+        // IDs não encontrados
+        $foundIds = $users->pluck('id')->toArray();
+        $notFound = array_diff($idsArray, $foundIds);
+
+        return [
+            'deleted' => $deleted,
+            'not_found' => array_values($notFound),
+            'errors' => $errors,
+        ];
     }
 
     /**

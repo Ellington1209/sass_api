@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\TenantModule;
 use App\Models\User;
+use App\Models\Student;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -128,23 +129,65 @@ class TenantService
     }
 
     /**
-     * Exclui um tenant
+     * Exclui um ou vários tenants (soft delete)
+     * @param int|array $ids ID único ou array de IDs
      */
-    public function delete(int $id): bool
+    public function delete(int|array $ids): array
     {
-        $tenant = Tenant::find($id);
+        // Normaliza para array
+        $idsArray = is_array($ids) ? $ids : [$ids];
+        
+        // Converte para inteiros
+        $idsArray = array_map('intval', $idsArray);
 
-        if (!$tenant) {
-            return false;
+        $tenants = Tenant::whereIn('id', $idsArray)->get();
+
+        if ($tenants->isEmpty()) {
+            return [
+                'deleted' => [],
+                'not_found' => $idsArray,
+                'errors' => [],
+            ];
         }
 
-        // Verifica se há usuários associados
-        $usersCount = $tenant->tenantUsers()->count();
-        if ($usersCount > 0) {
-            throw new \Exception("Cannot delete tenant with {$usersCount} associated user(s). Please remove users first.");
+        $deleted = [];
+        $errors = [];
+
+        foreach ($tenants as $tenant) {
+            // Verifica se há usuários associados
+            $usersCount = $tenant->tenantUsers()->count();
+            if ($usersCount > 0) {
+                $errors[] = [
+                    'id' => $tenant->id,
+                    'message' => "Não é possível excluir o tenant com {$usersCount} usuário(s) associado(s). Remova os usuários primeiro.",
+                ];
+                continue;
+            }
+
+            // Aplica soft delete em cascata
+            DB::transaction(function () use ($tenant) {
+                // Soft delete de todos os students do tenant
+                Student::where('tenant_id', $tenant->id)->delete();
+                
+                // Soft delete de todos os users do tenant
+                User::where('tenant_id', $tenant->id)->delete();
+                
+                // Soft delete do tenant
+                $tenant->delete();
+            });
+
+            $deleted[] = $tenant->id;
         }
 
-        return $tenant->delete();
+        // IDs não encontrados
+        $foundIds = $tenants->pluck('id')->toArray();
+        $notFound = array_diff($idsArray, $foundIds);
+
+        return [
+            'deleted' => $deleted,
+            'not_found' => array_values($notFound),
+            'errors' => $errors,
+        ];
     }
 
     /**

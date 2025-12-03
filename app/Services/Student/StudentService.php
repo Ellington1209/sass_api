@@ -276,19 +276,44 @@ class StudentService
     }
 
     /**
-     * Exclui um aluno
+     * Exclui um ou vários alunos (soft delete)
+     * @param int|array $ids ID único ou array de IDs
      */
-    public function delete(int $id, int $tenantId): bool
+    public function delete(int|array $ids, int $tenantId): array
     {
-        $student = Student::where('id', $id)
-            ->where('tenant_id', $tenantId)
-            ->first();
+        // Normaliza para array
+        $idsArray = is_array($ids) ? $ids : [$ids];
+        
+        // Converte para inteiros
+        $idsArray = array_map('intval', $idsArray);
 
-        if (!$student) {
-            return false;
+        $students = Student::whereIn('id', $idsArray)
+            ->where('tenant_id', $tenantId)
+            ->get();
+
+        if ($students->isEmpty()) {
+            return [
+                'deleted' => [],
+                'not_found' => $idsArray,
+                'errors' => [],
+            ];
         }
 
-        return $student->delete();
+        $deleted = [];
+        foreach ($students as $student) {
+            $student->delete();
+            $deleted[] = $student->id;
+        }
+
+        // IDs não encontrados
+        $foundIds = $students->pluck('id')->toArray();
+        $notFound = array_diff($idsArray, $foundIds);
+
+        return [
+            'deleted' => $deleted,
+            'not_found' => array_values($notFound),
+            'errors' => [],
+        ];
     }
 
     /**

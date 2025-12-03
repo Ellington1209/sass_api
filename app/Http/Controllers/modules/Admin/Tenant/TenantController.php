@@ -112,22 +112,59 @@ class TenantController
     }
 
     /**
-     * Exclui um tenant
+     * Exclui um ou vários tenants (soft delete)
+     * Aceita: DELETE /admin/tenants/{id} ou DELETE /admin/tenants/batch com body {ids: [1, 2, 3]} ou DELETE /admin/tenants com body {ids: [1, 2, 3]}
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int|string|null $id = null): JsonResponse
     {
         try {
-            $deleted = $this->tenantService->delete($id);
-
-            if (!$deleted) {
+            // Determina os IDs a serem excluídos
+            $ids = null;
+            if ($id !== null && $id !== 'batch') {
+                // ID na URL - converte string para int se necessário
+                $ids = is_numeric($id) ? (int) $id : null;
+                if ($ids === null) {
+                    return response()->json([
+                        'message' => 'ID inválido na URL',
+                    ], 400);
+                }
+            } elseif ($request->has('ids') && is_array($request->ids)) {
+                // Array de IDs no body
+                $ids = $request->ids;
+            } else {
                 return response()->json([
-                    'message' => 'Tenant not found',
+                    'message' => 'ID ou array de IDs não fornecido',
+                ], 400);
+            }
+
+            $result = $this->tenantService->delete($ids);
+
+            // Se não encontrou nenhum tenant
+            if (empty($result['deleted']) && empty($result['errors'])) {
+                return response()->json([
+                    'message' => 'Nenhum tenant encontrado',
+                    'not_found' => $result['not_found'],
                 ], 404);
             }
 
-            return response()->json([
-                'message' => 'Tenant deleted successfully',
-            ]);
+            $response = [
+                'message' => count($result['deleted']) > 1 
+                    ? count($result['deleted']) . ' tenants excluídos com sucesso'
+                    : 'Tenant excluído com sucesso',
+                'deleted' => $result['deleted'],
+            ];
+
+            if (!empty($result['not_found'])) {
+                $response['not_found'] = $result['not_found'];
+            }
+
+            if (!empty($result['errors'])) {
+                $response['errors'] = $result['errors'];
+            }
+
+            $statusCode = !empty($result['deleted']) ? 200 : 400;
+            
+            return response()->json($response, $statusCode);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),

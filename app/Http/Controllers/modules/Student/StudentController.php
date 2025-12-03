@@ -262,9 +262,10 @@ class StudentController
     }
 
     /**
-     * Exclui um aluno
+     * Exclui um ou vários alunos (soft delete)
+     * Aceita: DELETE /students/{id} ou DELETE /students/batch com body {ids: [1, 2, 3]} ou DELETE /students com body {ids: [1, 2, 3]}
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int|string|null $id = null): JsonResponse
     {
         $tenantId = $request->user()->tenant_id ?? $request->user()->tenantUsers()->first()?->tenant_id;
         
@@ -274,17 +275,47 @@ class StudentController
             ], 400);
         }
 
-        $deleted = $this->studentService->delete($id, $tenantId);
-
-        if (!$deleted) {
+        // Determina os IDs a serem excluídos
+        $ids = null;
+        if ($id !== null && $id !== 'batch') {
+            // ID na URL - converte string para int se necessário
+            $ids = is_numeric($id) ? (int) $id : null;
+            if ($ids === null) {
+                return response()->json([
+                    'message' => 'ID inválido na URL',
+                ], 400);
+            }
+        } elseif ($request->has('ids') && is_array($request->ids)) {
+            // Array de IDs no body
+            $ids = $request->ids;
+        } else {
             return response()->json([
-                'message' => 'Aluno não encontrado',
+                'message' => 'ID ou array de IDs não fornecido',
+            ], 400);
+        }
+
+        $result = $this->studentService->delete($ids, $tenantId);
+
+        // Se não encontrou nenhum aluno
+        if (empty($result['deleted'])) {
+            return response()->json([
+                'message' => 'Nenhum aluno encontrado',
+                'not_found' => $result['not_found'],
             ], 404);
         }
 
-        return response()->json([
-            'message' => 'Aluno excluído com sucesso',
-        ]);
+        $response = [
+            'message' => count($result['deleted']) > 1 
+                ? count($result['deleted']) . ' alunos excluídos com sucesso'
+                : 'Aluno excluído com sucesso',
+            'deleted' => $result['deleted'],
+        ];
+
+        if (!empty($result['not_found'])) {
+            $response['not_found'] = $result['not_found'];
+        }
+
+        return response()->json($response);
     }
 
     /**

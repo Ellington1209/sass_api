@@ -91,6 +91,33 @@ class PermissionSeeder extends Seeder
                 'description' => 'Permissão completa de tenants (todas as ações acima)',
             ],
 
+            // ========== ADMINISTRAÇÃO - USUARIOS ==========
+            [
+                'key' => 'admin.users.view',
+                'module_id' => $moduleIds['admin'],
+                'description' => 'Visualizar lista de usuários',
+            ],
+            [
+                'key' => 'admin.users.create',
+                'module_id' => $moduleIds['admin'],
+                'description' => 'Criar novos usuários',
+            ],
+            [
+                'key' => 'admin.users.edit',
+                'module_id' => $moduleIds['admin'],
+                'description' => 'Editar usuários existentes',
+            ],
+            [
+                'key' => 'admin.users.delete',
+                'module_id' => $moduleIds['admin'],
+                'description' => 'Excluir usuários',
+            ],
+            [
+                'key' => 'admin.users.manage',
+                'module_id' => $moduleIds['admin'],
+                'description' => 'Permissão completa de usuários (todas as ações acima)',
+            ],
+
             // ========== ADMINISTRAÇÃO - USUÁRIOS ==========
             [
                 'key' => 'usuario.users.view',
@@ -371,6 +398,27 @@ class PermissionSeeder extends Seeder
                 'module_id' => $moduleIds['files'],
                 'description' => 'Permissão completa de arquivos (todas as ações acima)',
             ],
+            // ========== MÓDULO CONFIGURAÇÕES ==========
+            [
+                'key' => 'settings.view',
+                'module_id' => $moduleIds['settings'],
+                'description' => 'Visualizar configurações',
+            ],
+            [
+                'key' => 'settings.edit',
+                'module_id' => $moduleIds['settings'],
+                'description' => 'Editar configurações',
+            ],
+            [
+                'key' => 'settings.manage',
+                'module_id' => $moduleIds['settings'],
+                'description' => 'Permissão completa de configurações (todas as ações acima)',
+            ],
+            [
+                'key' => 'settings.delete',
+                'module_id' => $moduleIds['settings'],
+                'description' => 'Excluir configurações',
+            ], 
         ];
     }
 }

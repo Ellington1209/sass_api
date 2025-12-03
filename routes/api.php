@@ -4,6 +4,7 @@ use App\Http\Controllers\modules\Admin\Module\ModuleController;
 use App\Http\Controllers\modules\Admin\Tenant\TenantController;
 use App\Http\Controllers\modules\Auth\AuthController;
 use App\Http\Controllers\modules\File\FileController;
+use App\Http\Controllers\modules\Permission\PermissionController;
 use App\Http\Controllers\modules\Student\StatusStudentController;
 use App\Http\Controllers\modules\Student\StudentController;
 use App\Http\Controllers\modules\User\UserController;
@@ -26,14 +27,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
     });
 
-    // Rotas de Usuários (com controle de permissões)
+    // Rotas de Usuários (com controle de permissões)   
     Route::prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index'])->middleware('check.permission:admin.users.view');        
         Route::get('/{id}', [UserController::class, 'show'])->middleware('check.permission:admin.users.view');        
         Route::post('/', [UserController::class, 'store'])->middleware('check.permission:admin.users.create');        
         Route::put('/{id}', [UserController::class, 'update'])->middleware('check.permission:admin.users.edit');        
         Route::patch('/{id}', [UserController::class, 'update'])->middleware('check.permission:admin.users.edit');        
-        Route::delete('/{id}', [UserController::class, 'destroy']) ->middleware('check.permission:admin.users.delete');
+        Route::post('/{id}/permissions', [PermissionController::class, 'saveUserPermissions'])->middleware('check.permission:admin.users.edit'); // Salvar permissões do usuário
+        Route::delete('/batch', [UserController::class, 'destroy'])->middleware('check.permission:admin.users.delete'); // Array de IDs no body - /users/batch
+        Route::delete('/', [UserController::class, 'destroy'])->middleware('check.permission:admin.users.delete'); // Array de IDs no body - /users
+        Route::delete('/{id}', [UserController::class, 'destroy'])->middleware('check.permission:admin.users.delete'); // ID na URL
+    });
+
+    // Rotas de Permissões
+    Route::prefix('tenants')->group(function () {
+        Route::get('/{id}/permissions/{user_id}', [PermissionController::class, 'getTenantPermissions']); // Listar permissões do tenant com user_id
+        Route::get('/{id}/permissions', [PermissionController::class, 'getTenantPermissions']); // Listar permissões do tenant (sem user_id)
     });
 
     // Rotas de Admin
@@ -48,7 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', [TenantController::class, 'store']);
             Route::put('/{id}', [TenantController::class, 'update']);
             Route::patch('/{id}', [TenantController::class, 'update']);
-            Route::delete('/{id}', [TenantController::class, 'destroy']);
+            Route::delete('/batch', [TenantController::class, 'destroy']); // Array de IDs no body - /admin/tenants/batch
+            Route::delete('/{id}', [TenantController::class, 'destroy']); // ID na URL
         });
     });
 
@@ -65,7 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [StudentController::class, 'store'])->middleware('check.permission:students.create');
         Route::put('/{id}', [StudentController::class, 'update'])->middleware('check.permission:students.edit');
         Route::patch('/{id}', [StudentController::class, 'update'])->middleware('check.permission:students.edit');
-        Route::delete('/{id}', [StudentController::class, 'destroy'])->middleware('check.permission:students.delete');
+        Route::delete('/batch', [StudentController::class, 'destroy'])->middleware('check.permission:students.delete'); // Array de IDs no body - /students/batch
+        Route::delete('/', [StudentController::class, 'destroy'])->middleware('check.permission:students.delete'); // Array de IDs no body - /students
+        Route::delete('/{id}', [StudentController::class, 'destroy'])->middleware('check.permission:students.delete'); // ID na URL
         
         // Rotas de documentos
         Route::post('/{id}/documents', [StudentController::class, 'addDocument'])->middleware('check.permission:students.upload_document');
@@ -81,7 +94,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/upload', [FileController::class, 'upload'])->middleware('check.permission:files.upload');
         Route::get('/show/{path}', [FileController::class, 'show'])->where('path', '.*')->middleware('check.permission:files.view');
         Route::get('/{id}/url', [FileController::class, 'showUrl'])->middleware('check.permission:files.download');
-        Route::delete('/{id}/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete');
+        Route::delete('/batch/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete'); // Array de IDs no body - /files/batch/delete
+        Route::delete('/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete'); // Array de IDs no body - /files/delete
+        Route::delete('/{id}/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete'); // ID na URL
     });
 });
 

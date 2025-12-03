@@ -32,4 +32,9 @@ class Module extends Model
     {
         return $this->belongsToMany(Tenant::class, 'tenant_modules');
     }
+
+    public function permissions()
+    {
+        return $this->hasMany(Permission::class);
+    }
 }

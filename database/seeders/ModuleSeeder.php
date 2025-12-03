@@ -52,6 +52,12 @@ class ModuleSeeder extends Seeder
                 'description' => 'Gerenciamento de arquivos e uploads',
                 'active' => true,
             ],
+            [
+                'key' => 'settings',
+                'name' => 'Configurações',
+                'description' => 'Gerenciamento de configurações do sistema',
+                'active' => true,
+            ],
             
         ];
 
