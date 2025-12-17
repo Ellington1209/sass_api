@@ -147,6 +147,32 @@ class ProviderController
 
         // O middleware HandlePutFormData deve ter processado os dados
         $requestData = $request->all();
+        
+        // Processa service_ids se vier como array indexado (service_ids[0], service_ids[1], etc)
+        // Também verifica se vem como string separada por vírgula ou array simples
+        if ($request->has('service_ids')) {
+            $serviceIds = $request->input('service_ids');
+            
+            // Se for string, tenta converter para array
+            if (is_string($serviceIds)) {
+                $serviceIds = explode(',', $serviceIds);
+                $serviceIds = array_map('trim', $serviceIds);
+            }
+            
+            // Se for array, normaliza
+            if (is_array($serviceIds)) {
+                $serviceIds = array_values($serviceIds); // Remove índices e reordena
+                $serviceIds = array_filter($serviceIds, function($value) {
+                    return $value !== null && $value !== '';
+                }); // Remove valores vazios
+                $serviceIds = array_map('intval', $serviceIds); // Converte para inteiros
+                $serviceIds = array_values(array_unique($serviceIds)); // Remove duplicatas e reindexa
+            } else {
+                $serviceIds = [];
+            }
+            
+            $requestData['service_ids'] = $serviceIds;
+        }
 
         // Valida arquivo manualmente se existir
         $photoFile = null;

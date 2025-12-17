@@ -523,9 +523,35 @@ class AgendaService
                     : $person->photo_url
             ) : null,
             'service_ids' => $provider->service_ids,
+            'services' => $this->getServicesData($provider->service_ids),
             'created_at' => $provider->created_at?->toISOString(),
             'updated_at' => $provider->updated_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Busca os dados dos serviços pelos IDs
+     */
+    private function getServicesData(?array $serviceIds): array
+    {
+        if (!$serviceIds || empty($serviceIds)) {
+            return [];
+        }
+
+        // Converte strings para inteiros se necessário
+        $ids = array_map('intval', $serviceIds);
+        
+        $services = \App\Models\Service::whereIn('id', $ids)
+            ->select('id', 'name', 'slug')
+            ->get();
+
+        return $services->map(function ($service) {
+            return [
+                'id' => $service->id,
+                'name' => $service->name,
+                'slug' => $service->slug,
+            ];
+        })->toArray();
     }
 
     private function formatAppointment(Appointment $appointment): array

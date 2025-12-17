@@ -26,8 +26,33 @@ class HandlePutFormData
                 if ($boundary) {
                     $parsed = $this->parseMultipart($input, $boundary);
                     if (!empty($parsed['data'])) {
-                        // Merge os dados parseados no request
+                        // Processa arrays antes de fazer merge
+                        $processedData = [];
                         foreach ($parsed['data'] as $key => $value) {
+                            // Se for array indexado, agrupa
+                            if (preg_match('/^(.+)\[(\d+)\]$/', $key, $arrayMatches)) {
+                                $arrayName = $arrayMatches[1];
+                                $arrayIndex = (int)$arrayMatches[2];
+                                
+                                if (!isset($processedData[$arrayName]) || !is_array($processedData[$arrayName])) {
+                                    $processedData[$arrayName] = [];
+                                }
+                                $processedData[$arrayName][$arrayIndex] = $value;
+                            } else {
+                                $processedData[$key] = $value;
+                            }
+                        }
+                        
+                        // Reordena arrays indexados
+                        foreach ($processedData as $key => $value) {
+                            if (is_array($value) && array_keys($value) !== range(0, count($value) - 1)) {
+                                // Se tem índices não sequenciais, reordena
+                                $processedData[$key] = array_values($value);
+                            }
+                        }
+                        
+                        // Merge os dados processados no request
+                        foreach ($processedData as $key => $value) {
                             $request->merge([$key => $value]);
                         }
                     }
@@ -35,14 +60,12 @@ class HandlePutFormData
                     // Processa arquivos ANTES de fazer merge dos dados
                     // Isso garante que o arquivo esteja disponível para validação
                     if (!empty($parsed['files'])) {
-                        Log::info('Processando arquivos do multipart', ['count' => count($parsed['files'])]);
+                      
                         foreach ($parsed['files'] as $key => $fileInfo) {
-                            Log::info('Criando UploadedFile', ['key' => $key, 'fileInfo' => $fileInfo]);
                             $uploadedFile = $this->createUploadedFile($fileInfo);
                             if ($uploadedFile) {
                                 // Adiciona ao files do request
                                 $request->files->set($key, $uploadedFile);
-                                Log::info('Arquivo adicionado ao request->files', ['key' => $key]);
                                 // Também remove do data para não duplicar
                                 unset($parsed['data'][$key]);
                             } else {
@@ -107,7 +130,18 @@ class HandlePutFormData
                             'error' => UPLOAD_ERR_OK,
                         ];
                     } else {
-                        $data[$name] = $value;
+                        // Processa arrays indexados (ex: service_ids[0], service_ids[1])
+                        if (preg_match('/^(.+)\[(\d+)\]$/', $name, $arrayMatches)) {
+                            $arrayName = $arrayMatches[1];
+                            $arrayIndex = (int)$arrayMatches[2];
+                            
+                            if (!isset($data[$arrayName]) || !is_array($data[$arrayName])) {
+                                $data[$arrayName] = [];
+                            }
+                            $data[$arrayName][$arrayIndex] = $value;
+                        } else {
+                            $data[$name] = $value;
+                        }
                     }
                 }
             }
@@ -119,20 +153,17 @@ class HandlePutFormData
     private function createUploadedFile(array $fileInfo): ?UploadedFile
     {
         if (!isset($fileInfo['tmp_name']) || !file_exists($fileInfo['tmp_name'])) {
-            \Log::error('Arquivo temporário não existe', ['fileInfo' => $fileInfo]);
             return null;
         }
 
         try {
             // Verifica se o arquivo ainda existe e tem conteúdo
             if (!is_readable($fileInfo['tmp_name'])) {
-                \Log::error('Arquivo temporário não é legível', ['tmp_name' => $fileInfo['tmp_name']]);
                 return null;
             }
             
             $fileSize = filesize($fileInfo['tmp_name']);
             if ($fileSize === false || $fileSize === 0) {
-                \Log::error('Arquivo temporário está vazio ou não pode ser lido', ['tmp_name' => $fileInfo['tmp_name']]);
                 return null;
             }
 
@@ -145,20 +176,9 @@ class HandlePutFormData
             );
 
             $uploadedFile = UploadedFile::createFromBase($symfonyFile);
-            
-            \Log::info('UploadedFile criado com sucesso', [
-                'name' => $uploadedFile->getClientOriginalName(),
-                'size' => $uploadedFile->getSize(),
-                'mime' => $uploadedFile->getMimeType(),
-                'isValid' => $uploadedFile->isValid(),
-                'realPath' => $uploadedFile->getRealPath(),
-                'pathname' => $uploadedFile->getPathname(),
-                'fileExists' => file_exists($uploadedFile->getRealPath() ?: $uploadedFile->getPathname())
-            ]);
-            
             return $uploadedFile;
         } catch (\Exception $e) {
-            \Log::error('Erro ao criar UploadedFile', [
+            Log::error('Erro ao criar UploadedFile', [
                 'message' => $e->getMessage(),
                 'fileInfo' => $fileInfo,
                 'trace' => $e->getTraceAsString()

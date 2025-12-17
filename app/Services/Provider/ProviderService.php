@@ -181,7 +181,28 @@ class ProviderService
             // Remove person_id se estiver presente, pois não pode ser alterado
             unset($data['person_id']);
             
+            // Processa service_ids se fornecido
+            $providerData = [];
+            if (isset($data['service_ids'])) {
+                // Garante que service_ids seja um array
+                $serviceIds = is_array($data['service_ids']) ? $data['service_ids'] : [$data['service_ids']];
+                // Remove valores vazios, converte para inteiros e remove duplicatas
+                $serviceIds = array_filter($serviceIds, function($value) {
+                    return $value !== null && $value !== '';
+                });
+                $serviceIds = array_map('intval', $serviceIds);
+                $serviceIds = array_values(array_unique($serviceIds));
+                $providerData['service_ids'] = $serviceIds;
+                unset($data['service_ids']); // Remove do $data para não processar novamente
+            }
+            
             // Atualiza dados do provider (service_ids)
+            // Sempre atualiza service_ids se fornecido, mesmo que seja array vazio
+            if (!empty($providerData)) {
+                $provider->update($providerData);
+            }
+            
+            // Atualiza outros campos do provider se houver
             if (!empty($data)) {
                 $provider->update($data);
             }
@@ -232,9 +253,35 @@ class ProviderService
                     : $person->photo_url
             ) : null,
             'service_ids' => $provider->service_ids,
+            'services' => $this->getServicesData($provider->service_ids),
             'created_at' => $provider->created_at?->toISOString(),
             'updated_at' => $provider->updated_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Busca os dados dos serviços pelos IDs
+     */
+    private function getServicesData(?array $serviceIds): array
+    {
+        if (!$serviceIds || empty($serviceIds)) {
+            return [];
+        }
+
+        // Converte strings para inteiros se necessário
+        $ids = array_map('intval', $serviceIds);
+        
+        $services = \App\Models\Service::whereIn('id', $ids)
+            ->select('id', 'name', 'slug')
+            ->get();
+
+        return $services->map(function ($service) {
+            return [
+                'id' => $service->id,
+                'name' => $service->name,
+                'slug' => $service->slug,
+            ];
+        })->toArray();
     }
 
     /**
