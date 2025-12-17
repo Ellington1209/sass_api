@@ -6,23 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Student extends Model
+class Provider extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'tenant_id',
         'person_id',
-        'category',
-        'status_students_id',
-        'registration_number',
+        'service_ids',
     ];
 
     protected function casts(): array
     {
-        return [];
+        return [
+            'service_ids' => 'array',
+        ];
     }
 
     public function tenant(): BelongsTo
@@ -35,19 +34,9 @@ class Student extends Model
         return $this->belongsTo(Person::class);
     }
 
-    public function statusStudent(): BelongsTo
+    public function appointments(): HasMany
     {
-        return $this->belongsTo(StatusStudent::class, 'status_students_id');
-    }
-
-    public function documents(): HasMany
-    {
-        return $this->hasMany(StudentDocument::class);
-    }
-
-    public function notes(): HasMany
-    {
-        return $this->hasMany(StudentNote::class);
+        return $this->hasMany(Appointment::class);
     }
 }
 

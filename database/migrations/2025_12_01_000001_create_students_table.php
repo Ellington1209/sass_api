@@ -6,38 +6,37 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
-            $table->foreignId('user_id')->nullable()->after('tenant_id')->constrained('users')->onDelete('cascade');
-            $table->string('cpf', 14)->unique();
-            $table->string('rg', 20)->nullable();
-            $table->date('birth_date');
-            $table->string('phone', 20)->nullable();
-            $table->string('address_street')->nullable();
-            $table->string('address_number')->nullable();
-            $table->string('address_neighborhood')->nullable();
-            $table->string('address_city')->nullable();
-            $table->string('address_state', 2)->nullable();
-            $table->string('address_zip', 10)->nullable();
-            $table->enum('category', ['A', 'B', 'C', 'D', 'AB', 'AC', 'AD', 'AE'])->nullable();
-            $table->foreignId('status_students_id')->nullable()->constrained('status_students')->onDelete('set null');
-            $table->string('photo_url')->nullable();
+
+            $table->foreignId('tenant_id')
+                ->constrained('tenants')
+                ->onDelete('cascade');
+
+            $table->foreignId('person_id')
+                ->constrained('persons')
+                ->onDelete('cascade');
+
+            $table->enum('category', ['A', 'B', 'C', 'D', 'AB', 'AC', 'AD', 'AE'])
+                ->nullable();
+
+            $table->foreignId('status_students_id')
+                ->nullable()
+                ->constrained('status_students')
+                ->onDelete('set null');
+
+            $table->string('registration_number')->nullable(); // matrícula
+
             $table->timestamps();
+
+            $table->unique(['tenant_id', 'person_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('students');
     }
 };
-

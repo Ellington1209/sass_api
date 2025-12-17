@@ -3,6 +3,7 @@
 namespace App\Services\Student;
 
 use App\Models\File;
+use App\Models\Person;
 use App\Models\Student;
 use App\Models\StudentDocument;
 use App\Models\StudentNote;
@@ -26,7 +27,7 @@ class StudentService
     public function getAll(int $tenantId, ?array $filters = null, int $perPage = 15, int $page = 1): array
     {
         $query = Student::where('tenant_id', $tenantId)
-            ->with(['user', 'statusStudent']);
+            ->with(['person.user', 'statusStudent']);
 
         // Filtros opcionais
         if ($filters) {
@@ -46,23 +47,23 @@ class StudentService
             if (isset($filters['search'])) {
                 $search = $filters['search'];
                 $query->where(function ($q) use ($search) {
-                    $q->where('cpf', 'ilike', "%{$search}%")
-                        ->orWhereHas('user', function ($userQuery) use ($search) {
-                            $userQuery->where('name', 'ilike', "%{$search}%")
-                                ->orWhere('email', 'ilike', "%{$search}%");
-                        });
+                    $q->whereHas('person', function ($personQuery) use ($search) {
+                        $personQuery->where('cpf', 'ilike', "%{$search}%")
+                            ->orWhere('rg', 'ilike', "%{$search}%")
+                            ->orWhere('phone', 'ilike', "%{$search}%");
+                    });
                 });
             }
         }
 
-        // Ordenação: por nome do usuário (usando subquery para evitar problemas com join)
-        $query->orderByRaw('(SELECT name FROM users WHERE users.id = students.user_id)');
+        // Ordenação: por CPF da pessoa
+        $query->orderByRaw('(SELECT cpf FROM persons WHERE persons.id = students.person_id)');
 
         // Paginação
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
         // Carrega os relacionamentos necessários
-        $paginator->getCollection()->load(['user', 'statusStudent', 'documents', 'notes.user']);
+        $paginator->getCollection()->load(['person.user', 'statusStudent', 'documents', 'notes.user']);
 
         // Formata os resultados
         $formattedStudents = $paginator->getCollection()->map(function ($student) {
@@ -89,7 +90,7 @@ class StudentService
     {
         $student = Student::where('id', $id)
             ->where('tenant_id', $tenantId)
-            ->with(['user', 'statusStudent', 'documents', 'notes.user'])
+            ->with(['person.user', 'statusStudent', 'documents', 'notes.user'])
             ->first();
 
         if (!$student) {
@@ -129,6 +130,8 @@ class StudentService
                 'files.upload',
                 'files.view',
                 'files.download',
+                'agenda.services.view',
+                'agenda.services.create',               
             ];
 
             foreach ($permissions as $permission) {
@@ -141,37 +144,39 @@ class StudentService
             // Faz upload da foto se fornecida
             $photoUrl = null;
             if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-                try {
-                    \Log::info('Iniciando upload da foto', ['tenant_id' => $tenantId, 'user_id' => $user->id]);
-                    $photoUrl = $this->uploadPhoto($data['photo'], $tenantId, $user->id);
-                    \Log::info('Upload da foto concluído', ['photo_url' => $photoUrl]);
-                } catch (\Exception $e) {
-                    \Log::error('Erro ao fazer upload da foto', [
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
+                try {                   
+                    $photoUrl = $this->uploadPhoto($data['photo'], $tenantId, $user->id);                   
+                } catch (\Exception $e) {                   
                     throw $e;
                 }
             } elseif (isset($data['photo_url']) && is_string($data['photo_url'])) {
                 $photoUrl = $data['photo_url'];
             }
 
-            // Prepara os dados do aluno
-            $studentData = [
+            // 2. Cria a pessoa com os dados pessoais (incluindo photo_url)
+            $person = Person::create([
                 'tenant_id' => $tenantId,
                 'user_id' => $user->id,
-                'cpf' => $data['cpf'],
+                'cpf' => $data['cpf'] ?? null,
                 'rg' => $data['rg'] ?? null,
-                'birth_date' => $data['birth_date'],
+                'birth_date' => $data['birth_date'] ?? null,
                 'phone' => $data['phone'] ?? null,
                 'address_street' => $data['address_street'] ?? null,
                 'address_number' => $data['address_number'] ?? null,
+                'address_complement' => $data['address_complement'] ?? null,
                 'address_neighborhood' => $data['address_neighborhood'] ?? null,
                 'address_city' => $data['address_city'] ?? null,
                 'address_state' => $data['address_state'] ?? null,
                 'address_zip' => $data['address_zip'] ?? null,
-                'category' => $data['category'] ?? null,
                 'photo_url' => $photoUrl,
+            ]);
+
+            // 3. Cria o aluno referenciando a pessoa
+            $studentData = [
+                'tenant_id' => $tenantId,
+                'person_id' => $person->id,
+                'category' => $data['category'] ?? null,
+                'registration_number' => $data['registration_number'] ?? null,
             ];
 
             // Se não foi informado status_students_id, busca o status padrão (pre-cadastro)
@@ -185,7 +190,7 @@ class StudentService
             }
             
             $student = Student::create($studentData);
-            $student->load(['user', 'statusStudent', 'documents', 'notes.user']);
+            $student->load(['person.user', 'statusStudent', 'documents', 'notes.user']);
 
             return $this->formatStudent($student);
         });
@@ -196,80 +201,81 @@ class StudentService
      */
     public function update(int $id, int $tenantId, array $data): ?array
     {
-        \Log::info('StudentService->update iniciado', [
-            'id' => $id,
-            'tenant_id' => $tenantId,
-            'data_keys' => array_keys($data),
-            'data' => $data
-        ]);
-
         return DB::transaction(function () use ($id, $tenantId, $data) {
             $student = Student::where('id', $id)
                 ->where('tenant_id', $tenantId)
+                ->with('person.user')
                 ->first();
 
             if (!$student) {
-                \Log::warning('Aluno não encontrado', ['id' => $id, 'tenant_id' => $tenantId]);
                 return null;
             }
 
-            \Log::info('Aluno encontrado', [
-                'student_id' => $student->id,
-                'user_id' => $student->user_id,
-                'current_name' => $student->user->name,
-                'current_email' => $student->user->email
-            ]);
-
-            // Atualiza dados do usuário se fornecidos
+            // Atualiza dados do usuário se fornecidos (name e email)
             if (isset($data['name']) || isset($data['email'])) {
-                $userData = [];
-                if (isset($data['name'])) {
-                    $userData['name'] = $data['name'];
-                    \Log::info('Atualizando nome do usuário', ['old' => $student->user->name, 'new' => $data['name']]);
+                $user = $student->person->user;
+                
+                if ($user) {
+                    $userData = [];
+                    if (isset($data['name'])) {
+                        $userData['name'] = $data['name'];
+                    }
+                    if (isset($data['email'])) {
+                        $userData['email'] = $data['email'];
+                    }
+                    $user->update($userData);
                 }
-                if (isset($data['email'])) {
-                    $userData['email'] = $data['email'];
-                    \Log::info('Atualizando email do usuário', ['old' => $student->user->email, 'new' => $data['email']]);
-                }
-                $updated = $student->user->update($userData);
-                \Log::info('Resultado da atualização do usuário', ['updated' => $updated, 'userData' => $userData]);
+                
                 unset($data['name'], $data['email']);
             }
 
-            // Remove user_id se estiver presente, pois não pode ser alterado
-            unset($data['user_id']);
-            
+            // Atualiza dados da pessoa se fornecidos
+            $personData = [];
+            $personFields = [
+                'cpf', 'rg', 'birth_date', 'phone',
+                'address_street', 'address_number', 'address_complement',
+                'address_neighborhood', 'address_city', 'address_state', 'address_zip'
+            ];
+
+            foreach ($personFields as $field) {
+                if (isset($data[$field])) {
+                    $personData[$field] = $data[$field];
+                    unset($data[$field]);
+                }
+            }
+
             // Faz upload da foto se fornecida
             if (isset($data['photo']) && $data['photo'] instanceof UploadedFile) {
-                \Log::info('Upload de nova foto');
                 // Remove foto antiga se existir
-                if ($student->photo_url) {
-                    $this->deletePhoto($student->photo_url);
+                if ($student->person->photo_url) {
+                    $this->deletePhoto($student->person->photo_url);
                 }
-                $data['photo_url'] = $this->uploadPhoto($data['photo'], $tenantId, $student->user_id);
+                // Usa o ID do usuário para o upload
+                $personData['photo_url'] = $this->uploadPhoto($data['photo'], $tenantId, $student->person->user_id);
                 unset($data['photo']);
             } elseif (isset($data['photo']) && $data['photo'] === null) {
-                \Log::info('Removendo foto');
                 // Se enviar null, remove a foto
-                if ($student->photo_url) {
-                    $this->deletePhoto($student->photo_url);
+                if ($student->person->photo_url) {
+                    $this->deletePhoto($student->person->photo_url);
                 }
-                $data['photo_url'] = null;
+                $personData['photo_url'] = null;
                 unset($data['photo']);
+            } elseif (isset($data['photo_url']) && is_string($data['photo_url'])) {
+                $personData['photo_url'] = $data['photo_url'];
+                unset($data['photo_url']);
             }
+
+            if (!empty($personData)) {
+                $student->person->update($personData);
+            }
+
+            // Remove person_id se estiver presente, pois não pode ser alterado
+            unset($data['person_id']);
             
-            \Log::info('Dados para atualizar o aluno', ['data' => $data]);
-            $updated = $student->update($data);
-            \Log::info('Resultado da atualização do aluno', ['updated' => $updated]);
+            $student->update($data);
             
             $student->refresh();
-            $student->load(['user', 'statusStudent', 'documents', 'notes.user']);
-
-            \Log::info('Dados após atualização', [
-                'name' => $student->user->name,
-                'email' => $student->user->email,
-                'cpf' => $student->cpf
-            ]);
+            $student->load(['person.user', 'statusStudent', 'documents', 'notes.user']);
 
             return $this->formatStudent($student);
         });
@@ -416,38 +422,46 @@ class StudentService
      */
     private function formatStudent(Student $student): array
     {
+        $person = $student->person;
+        $user = $person?->user;
+        
         return [
             'id' => $student->id,
             'tenant_id' => $student->tenant_id,
-            'user_id' => $student->user_id,
-            'user' => $student->user ? [
-                'id' => $student->user->id,
-                'name' => $student->user->name,
-                'email' => $student->user->email,
+            'person_id' => $student->person_id,
+            'user' => $user ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
             ] : null,
-            'cpf' => $student->cpf,
-            'rg' => $student->rg,
-            'birth_date' => $student->birth_date?->format('Y-m-d'),
-            'phone' => $student->phone,
-            'address' => [
-                'street' => $student->address_street,
-                'number' => $student->address_number,
-                'neighborhood' => $student->address_neighborhood,
-                'city' => $student->address_city,
-                'state' => $student->address_state,
-                'zip' => $student->address_zip,
-            ],
+            'person' => $person ? [
+                'id' => $person->id,
+                'cpf' => $person->cpf,
+                'rg' => $person->rg,
+                'birth_date' => $person->birth_date?->format('Y-m-d'),
+                'phone' => $person->phone,
+                'address' => [
+                    'street' => $person->address_street,
+                    'number' => $person->address_number,
+                    'complement' => $person->address_complement,
+                    'neighborhood' => $person->address_neighborhood,
+                    'city' => $person->address_city,
+                    'state' => $person->address_state,
+                    'zip' => $person->address_zip,
+                ],
+            ] : null,
             'category' => $student->category,
+            'registration_number' => $student->registration_number,
             'status' => $student->statusStudent ? [
                 'id' => $student->statusStudent->id,
                 'key' => $student->statusStudent->key,
                 'name' => $student->statusStudent->name,
                 'description' => $student->statusStudent->description,
             ] : null,
-            'photo_url' => $student->photo_url ? (
-                str_starts_with($student->photo_url, 'tenants/') 
-                    ? url('/api/files/public/' . urlencode($student->photo_url))
-                    : $student->photo_url
+            'photo_url' => $person?->photo_url ? (
+                str_starts_with($person->photo_url, 'tenants/') 
+                    ? url('/api/files/public/' . urlencode($person->photo_url))
+                    : $person->photo_url
             ) : null,
             'documents' => $student->documents->map(function ($doc) {
                 return [
@@ -486,12 +500,6 @@ class StudentService
      */
     private function uploadPhoto(UploadedFile $file, int $tenantId, int $userId): string
     {
-        \Log::info('Validando arquivo de foto', [
-            'mime' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'name' => $file->getClientOriginalName()
-        ]);
-
         $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         if (!in_array($file->getMimeType(), $allowedMimes)) {
             throw new \Exception('Tipo de arquivo não permitido. Use apenas imagens (JPEG, PNG, GIF, WEBP).');
@@ -501,9 +509,7 @@ class StudentService
             throw new \Exception('Arquivo muito grande. Tamanho máximo: 5MB.');
         }
 
-        \Log::info('Chamando FileService->upload');
         $fileRecord = $this->fileService->upload($file, $tenantId, 'avatar', $userId);
-        \Log::info('FileService->upload concluído', ['file_id' => $fileRecord->id, 'path' => $fileRecord->path]);
         
         return $fileRecord->path;
     }

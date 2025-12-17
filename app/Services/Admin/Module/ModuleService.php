@@ -20,6 +20,14 @@ class ModuleService
             });
     }
 
+    public function getServicesEssential(): Collection
+    {
+        return Module::whereIn('id', [10, 11, 12])
+            ->get()
+            ->map(fn ($module) => $this->formatModule($module));
+    }
+    
+
     /**
      * Formata os dados do módulo para resposta
      */

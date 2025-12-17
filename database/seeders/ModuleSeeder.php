@@ -58,7 +58,42 @@ class ModuleSeeder extends Seeder
                 'description' => 'Gerenciamento de configurações do sistema',
                 'active' => true,
             ],
-            
+            [
+                'key' => 'agenda',
+                'name' => 'Agenda',
+                'description' => 'Gerenciamento de serviços, profissionais e agendamentos',
+                'active' => true,
+            ],
+            [
+                'key' => 'auto-escola',
+                'name' => 'Auto Escola',
+                'description' => 'Gerenciamento de auto escola',
+                'active' => true,
+            ],
+            [
+                'key' => 'barbearia',
+                'name' => 'Barbearia',
+                'description' => 'Gerenciamento de barbearia',
+                'active' => true,
+            ],
+            [
+                'key' => 'salão-de-beleza',
+                'name' => 'Salão de Beleza',
+                'description' => 'Gerenciamento de barbearia',
+                'active' => true,
+            ],
+            [
+                'key' => 'service',
+                'name' => 'Serviço',
+                'description' => 'Gerenciamento de serviço',
+                'active' => true,
+            ],
+            [
+                'key' => 'provider',
+                'name' => 'Profissional',
+                'description' => 'Gerenciamento de profissional',
+                'active' => true,
+            ],
         ];
 
         foreach ($modules as $module) {

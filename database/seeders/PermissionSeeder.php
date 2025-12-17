@@ -19,7 +19,7 @@ class PermissionSeeder extends Seeder
         })->toArray();
 
         // Verificar se os módulos necessários existem
-        $requiredModules = ['admin', 'cliente', 'estoque', 'financeiro', 'usuario', 'students', 'files'];
+        $requiredModules = ['admin', 'cliente', 'estoque', 'financeiro', 'usuario', 'students', 'files', 'agenda', 'auto-escola', 'barbearia', 'salão-de-beleza', 'service', 'provider'];
         $missingModules = array_diff($requiredModules, array_keys($moduleIds));
         
         if (!empty($missingModules)) {
@@ -418,7 +418,209 @@ class PermissionSeeder extends Seeder
                 'key' => 'settings.delete',
                 'module_id' => $moduleIds['settings'],
                 'description' => 'Excluir configurações',
-            ], 
+            ],
+
+            // ========== MÓDULO AGENDA ==========
+            [
+                'key' => 'agenda.services.view',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Visualizar serviços',
+            ],
+            [
+                'key' => 'agenda.services.create',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Criar novos serviços',
+            ],
+            [
+                'key' => 'agenda.services.edit',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Editar serviços existentes',
+            ],
+            [
+                'key' => 'agenda.services.delete',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Excluir serviços',
+            ],
+            [
+                'key' => 'agenda.providers.view',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Visualizar profissionais',
+            ],
+            [
+                'key' => 'agenda.providers.create',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Criar novos profissionais',
+            ],
+            [
+                'key' => 'agenda.providers.edit',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Editar profissionais existentes',
+            ],
+            [
+                'key' => 'agenda.providers.delete',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Excluir profissionais',
+            ],
+            [
+                'key' => 'agenda.appointments.view',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Visualizar agendamentos',
+            ],
+            [
+                'key' => 'agenda.appointments.create',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Criar novos agendamentos',
+            ],
+            [
+                'key' => 'agenda.appointments.edit',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Editar agendamentos existentes',
+            ],
+            [
+                'key' => 'agenda.appointments.delete',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Excluir agendamentos',
+            ],
+            [
+                'key' => 'agenda.manage',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Permissão completa de agenda (todas as ações acima)',
+            ],
+
+            // ========== MÓDULO AUTO-ESCOLA ==========
+            [
+                'key' => 'auto-escola.view',
+                'module_id' => $moduleIds['auto-escola'],
+                'description' => 'Visualizar dados de auto escola',
+            ],
+            [
+                'key' => 'auto-escola.create',
+                'module_id' => $moduleIds['auto-escola'],
+                'description' => 'Criar dados de auto escola',
+            ],
+            [
+                'key' => 'auto-escola.edit',
+                'module_id' => $moduleIds['auto-escola'],
+                'description' => 'Editar dados de auto escola',
+            ],
+            [
+                'key' => 'auto-escola.delete',
+                'module_id' => $moduleIds['auto-escola'],
+                'description' => 'Excluir dados de auto escola',
+            ],
+            [
+                'key' => 'auto-escola.manage',
+                'module_id' => $moduleIds['auto-escola'],
+                'description' => 'Permissão completa de auto escola (todas as ações acima)',
+            ],
+
+            // ========== MÓDULO BARBEARIA ==========
+            [
+                'key' => 'barbearia.view',
+                'module_id' => $moduleIds['barbearia'],
+                'description' => 'Visualizar dados de barbearia',
+            ],
+            [
+                'key' => 'barbearia.create',
+                'module_id' => $moduleIds['barbearia'],
+                'description' => 'Criar dados de barbearia',
+            ],
+            [
+                'key' => 'barbearia.edit',
+                'module_id' => $moduleIds['barbearia'],
+                'description' => 'Editar dados de barbearia',
+            ],
+            [
+                'key' => 'barbearia.delete',
+                'module_id' => $moduleIds['barbearia'],
+                'description' => 'Excluir dados de barbearia',
+            ],
+            [
+                'key' => 'barbearia.manage',
+                'module_id' => $moduleIds['barbearia'],
+                'description' => 'Permissão completa de barbearia (todas as ações acima)',
+            ],
+
+            // ========== MÓDULO SALÃO DE BELEZA ==========
+            [
+                'key' => 'salão-de-beleza.view',
+                'module_id' => $moduleIds['salão-de-beleza'],
+                'description' => 'Visualizar dados de salão de beleza',
+            ],
+            [
+                'key' => 'salão-de-beleza.create',
+                'module_id' => $moduleIds['salão-de-beleza'],
+                'description' => 'Criar dados de salão de beleza',
+            ],
+            [
+                'key' => 'salão-de-beleza.edit',
+                'module_id' => $moduleIds['salão-de-beleza'],
+                'description' => 'Editar dados de salão de beleza',
+            ],
+            [
+                'key' => 'salão-de-beleza.delete',
+                'module_id' => $moduleIds['salão-de-beleza'],
+                'description' => 'Excluir dados de salão de beleza',
+            ],
+            [
+                'key' => 'salão-de-beleza.manage',
+                'module_id' => $moduleIds['salão-de-beleza'],
+                'description' => 'Permissão completa de salão de beleza (todas as ações acima)',
+            ],
+
+            // ========== MÓDULO SERVICE ==========
+            [
+                'key' => 'service.view',
+                'module_id' => $moduleIds['service'],
+                'description' => 'Visualizar serviços',
+            ],
+            [
+                'key' => 'service.create',
+                'module_id' => $moduleIds['service'],
+                'description' => 'Criar serviços',
+            ],
+            [
+                'key' => 'service.edit',
+                'module_id' => $moduleIds['service'],
+                'description' => 'Editar serviços',
+            ],
+            [
+                'key' => 'service.delete',
+                'module_id' => $moduleIds['service'],
+                'description' => 'Excluir serviços',
+            ],
+            [
+                'key' => 'service.manage',
+                'module_id' => $moduleIds['service'],
+                'description' => 'Permissão completa de serviços (todas as ações acima)',
+            ],
+
+            // ========== MÓDULO PROVIDER ==========
+            [
+                'key' => 'provider.view',
+                'module_id' => $moduleIds['provider'],
+                'description' => 'Visualizar profissionais',
+            ],
+            [
+                'key' => 'provider.create',
+                'module_id' => $moduleIds['provider'],
+                'description' => 'Criar profissionais',
+            ],
+            [
+                'key' => 'provider.edit',
+                'module_id' => $moduleIds['provider'],
+                'description' => 'Editar profissionais',
+            ],
+            [
+                'key' => 'provider.delete',
+                'module_id' => $moduleIds['provider'],
+                'description' => 'Excluir profissionais',
+            ],
+            [
+                'key' => 'provider.manage',
+                'module_id' => $moduleIds['provider'],
+                'description' => 'Permissão completa de profissionais (todas as ações acima)',
+            ],
         ];
     }
 }

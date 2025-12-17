@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\modules\Student;
 
+use App\Models\Person;
 use App\Models\Student;
 use App\Services\Student\StudentService;
 use Illuminate\Http\JsonResponse;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class StudentController
 {
@@ -84,7 +86,14 @@ class StudentController
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'cpf' => 'required|string|size:14|unique:students,cpf',
+            'cpf' => [
+                'required',
+                'string',
+                'size:14',
+                Rule::unique('persons', 'cpf')->where(function ($query) use ($tenantId) {
+                    return $query->where('tenant_id', $tenantId);
+                }),
+            ],
             'rg' => 'nullable|string|max:20',
             'birth_date' => 'required|date',
             'phone' => 'nullable|string|max:20',
@@ -121,12 +130,9 @@ class StudentController
         // Verifica se há arquivo de foto (pode vir como 'photo' ou 'photo_url')
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo');
-            Log::info('Arquivo photo recebido', ['name' => $data['photo']->getClientOriginalName(), 'size' => $data['photo']->getSize()]);
         } elseif ($request->hasFile('photo_url')) {
             $data['photo'] = $request->file('photo_url');
-            Log::info('Arquivo photo_url recebido', ['name' => $data['photo']->getClientOriginalName(), 'size' => $data['photo']->getSize()]);
         } else {
-            Log::info('Nenhum arquivo de foto recebido', ['has_photo' => $request->hasFile('photo'), 'has_photo_url' => $request->hasFile('photo_url'), 'all_files' => array_keys($request->allFiles())]);
         }
         
         $student = $this->studentService->create($tenantId, $data);
@@ -147,7 +153,7 @@ class StudentController
             ], 400);
         }
 
-        $student = \App\Models\Student::find($id);
+        $student = \App\Models\Student::with('person')->find($id);
         if (!$student) {
             return response()->json(['message' => 'Aluno não encontrado'], 404);
         }
@@ -155,15 +161,6 @@ class StudentController
         // O middleware HandlePutFormData deve ter processado os dados
         $requestData = $request->all();
 
-        Log::info('Request recebido no update', [
-            'method' => $request->method(),
-            'content_type' => $request->header('Content-Type'),
-            'is_json' => $request->isJson(),
-            'request_data' => $requestData,
-            'all' => $request->all(),
-            'input' => $request->input(),
-            'has_file' => $request->hasFile('photo'),
-        ]);
 
         // Valida arquivo manualmente se existir (porque isValid() pode retornar false para arquivos criados manualmente)
         $photoFile = null;
@@ -187,10 +184,35 @@ class StudentController
             unset($requestData['photo']);
         }
         
+        // Busca a person_id do student para a validação de CPF
+        $personId = $student->person_id ?? null;
+        
+        // Busca o User atual através do email (se fornecido) ou deixa null
+        $currentUserId = null;
+        if (isset($requestData['email'])) {
+            $currentUser = \App\Models\User::where('email', $requestData['email'])
+                ->where('tenant_id', $tenantId)
+                ->first();
+            $currentUserId = $currentUser?->id;
+        }
+        
         $rules = [
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $student->user_id,
-            'cpf' => 'sometimes|string|size:14|unique:students,cpf,' . $id,
+            'email' => [
+                'sometimes',
+                'email',
+                Rule::unique('users', 'email')->ignore($currentUserId),
+            ],
+            'cpf' => [
+                'sometimes',
+                'string',
+                'size:14',
+                Rule::unique('persons', 'cpf')
+                    ->where(function ($query) use ($tenantId) {
+                        return $query->where('tenant_id', $tenantId);
+                    })
+                    ->ignore($personId),
+            ],
             'rg' => 'nullable|string|max:20',
             'birth_date' => 'sometimes|date',
             'phone' => 'nullable|string|max:20',

@@ -21,5 +21,11 @@ class ModuleController
 
         return response()->json($modules->toArray());
     }
+    public function servicesEssential(Request $request): JsonResponse
+    {
+        $modules = $this->moduleService->getServicesEssential();
+
+        return response()->json($modules->toArray());
+    }
 }
 

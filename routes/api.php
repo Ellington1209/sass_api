@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\modules\Admin\Module\ModuleController;
+use App\Http\Controllers\modules\Admin\Services\ServiceController as ServicesServiceController;
 use App\Http\Controllers\modules\Admin\Tenant\TenantController;
+use App\Http\Controllers\modules\Agenda\AppointmentController;
+use App\Http\Controllers\modules\Agenda\ProviderController;
+use App\Http\Controllers\modules\Agenda\ServiceController;
 use App\Http\Controllers\modules\Auth\AuthController;
 use App\Http\Controllers\modules\File\FileController;
 use App\Http\Controllers\modules\Permission\PermissionController;
@@ -49,8 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rotas de Admin
     Route::prefix('admin')->group(function () {
         // Rotas de Módulos
+        Route::get('/modules/services', [ModuleController::class, 'servicesEssential']);
         Route::get('/modules', [ModuleController::class, 'index']);
-        
+        Route::get('/services', [ServiceController::class, 'servicesProvider']);
         // Rotas de Tenant
         Route::prefix('tenants')->group(function () {
             Route::get('/', [TenantController::class, 'index']);
@@ -97,6 +102,45 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/batch/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete'); // Array de IDs no body - /files/batch/delete
         Route::delete('/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete'); // Array de IDs no body - /files/delete
         Route::delete('/{id}/delete', [FileController::class, 'delete'])->middleware('check.permission:files.delete'); // ID na URL
+    });
+
+    // Rotas de Agenda
+    Route::prefix('agenda')->group(function () {
+        // Services
+        Route::prefix('services')->group(function () {
+            Route::get('/', [ServiceController::class, 'index'])->middleware('check.permission:agenda.services.view');
+            Route::get('/{id}', [ServiceController::class, 'show'])->middleware('check.permission:agenda.services.view');
+            Route::post('/', [ServiceController::class, 'store'])->middleware('check.permission:agenda.services.create');
+            Route::put('/{id}', [ServiceController::class, 'update'])->middleware('check.permission:agenda.services.edit');
+            Route::patch('/{id}', [ServiceController::class, 'update'])->middleware('check.permission:agenda.services.edit');
+            Route::delete('/batch', [ServiceController::class, 'destroy'])->middleware('check.permission:agenda.services.delete');
+            Route::delete('/', [ServiceController::class, 'destroy'])->middleware('check.permission:agenda.services.delete');
+            Route::delete('/{id}', [ServiceController::class, 'destroy'])->middleware('check.permission:agenda.services.delete');
+        });
+
+        // Providers
+        Route::prefix('providers')->group(function () {
+            Route::get('/', [ProviderController::class, 'index'])->middleware('check.permission:agenda.providers.view');
+            Route::get('/{id}', [ProviderController::class, 'show'])->middleware('check.permission:agenda.providers.view');
+            Route::post('/', [ProviderController::class, 'store'])->middleware('check.permission:agenda.providers.create');
+            Route::put('/{id}', [ProviderController::class, 'update'])->middleware('check.permission:agenda.providers.edit');
+            Route::patch('/{id}', [ProviderController::class, 'update'])->middleware('check.permission:agenda.providers.edit');
+            Route::delete('/batch', [ProviderController::class, 'destroy'])->middleware('check.permission:agenda.providers.delete');
+            Route::delete('/', [ProviderController::class, 'destroy'])->middleware('check.permission:agenda.providers.delete');
+            Route::delete('/{id}', [ProviderController::class, 'destroy'])->middleware('check.permission:agenda.providers.delete');
+        });
+
+        // Appointments
+        Route::prefix('appointments')->group(function () {
+            Route::get('/', [AppointmentController::class, 'index'])->middleware('check.permission:agenda.appointments.view');
+            Route::get('/{id}', [AppointmentController::class, 'show'])->middleware('check.permission:agenda.appointments.view');
+            Route::post('/', [AppointmentController::class, 'store'])->middleware('check.permission:agenda.appointments.create');
+            Route::put('/{id}', [AppointmentController::class, 'update'])->middleware('check.permission:agenda.appointments.edit');
+            Route::patch('/{id}', [AppointmentController::class, 'update'])->middleware('check.permission:agenda.appointments.edit');
+            Route::delete('/batch', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
+            Route::delete('/', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
+            Route::delete('/{id}', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
+        });
     });
 });
 
