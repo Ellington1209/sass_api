@@ -12,6 +12,7 @@ use App\Http\Controllers\modules\Permission\PermissionController;
 use App\Http\Controllers\modules\Student\StatusStudentController;
 use App\Http\Controllers\modules\Student\StudentController;
 use App\Http\Controllers\modules\User\UserController;
+use App\Http\Controllers\modules\WhatsApp\WhatsappInstanceController;
 use Illuminate\Support\Facades\Route;
 
 // Rotas públicas (sem autenticação)
@@ -140,6 +141,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/batch', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
             Route::delete('/', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
             Route::delete('/{id}', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
+        });
+    });
+
+    // Rotas do WhatsApp
+    Route::prefix('whatsapp')->group(function () {
+        Route::prefix('instances')->group(function () {
+            Route::get('/', [WhatsappInstanceController::class, 'index'])->middleware('check.permission:whatsapp.instances.view');
+            Route::post('/', [WhatsappInstanceController::class, 'store'])->middleware('check.permission:whatsapp.instances.create');
+            Route::post('/{id}/send', [WhatsappInstanceController::class, 'send'])->middleware('check.permission:whatsapp.instances.send');
+            Route::delete('/{id}', [WhatsappInstanceController::class, 'destroy'])->middleware('check.permission:whatsapp.instances.delete');
         });
     });
 });

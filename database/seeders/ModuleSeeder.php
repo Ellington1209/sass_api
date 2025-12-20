@@ -94,6 +94,12 @@ class ModuleSeeder extends Seeder
                 'description' => 'Gerenciamento de profissional',
                 'active' => true,
             ],
+            [
+                'key' => 'whatsapp',
+                'name' => 'WhatsApp',
+                'description' => 'Gerenciamento de instâncias do WhatsApp',
+                'active' => true,
+            ],
         ];
 
         foreach ($modules as $module) {

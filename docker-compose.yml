@@ -9,6 +9,8 @@ services:
       - .:/var/www
     depends_on:
       - postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app-net
 

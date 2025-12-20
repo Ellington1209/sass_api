@@ -19,7 +19,7 @@ class PermissionSeeder extends Seeder
         })->toArray();
 
         // Verificar se os módulos necessários existem
-        $requiredModules = ['admin', 'cliente', 'estoque', 'financeiro', 'usuario', 'students', 'files', 'agenda', 'auto-escola', 'barbearia', 'salão-de-beleza', 'service', 'provider'];
+        $requiredModules = ['admin', 'cliente', 'estoque', 'financeiro', 'usuario', 'students', 'files', 'agenda', 'auto-escola', 'barbearia', 'salão-de-beleza', 'service', 'provider', 'whatsapp'];
         $missingModules = array_diff($requiredModules, array_keys($moduleIds));
         
         if (!empty($missingModules)) {
@@ -620,6 +620,33 @@ class PermissionSeeder extends Seeder
                 'key' => 'provider.manage',
                 'module_id' => $moduleIds['provider'],
                 'description' => 'Permissão completa de profissionais (todas as ações acima)',
+            ],
+
+            // ========== MÓDULO WHATSAPP ==========
+            [
+                'key' => 'whatsapp.instances.view',
+                'module_id' => $moduleIds['whatsapp'],
+                'description' => 'Visualizar instâncias do WhatsApp',
+            ],
+            [
+                'key' => 'whatsapp.instances.create',
+                'module_id' => $moduleIds['whatsapp'],
+                'description' => 'Criar instâncias do WhatsApp',
+            ],
+            [
+                'key' => 'whatsapp.instances.send',
+                'module_id' => $moduleIds['whatsapp'],
+                'description' => 'Enviar mensagens via WhatsApp',
+            ],
+            [
+                'key' => 'whatsapp.instances.delete',
+                'module_id' => $moduleIds['whatsapp'],
+                'description' => 'Deletar instâncias do WhatsApp',
+            ],
+            [
+                'key' => 'whatsapp.instances.manage',
+                'module_id' => $moduleIds['whatsapp'],
+                'description' => 'Permissão completa de WhatsApp (todas as ações acima)',
             ],
         ];
     }

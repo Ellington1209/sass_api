@@ -15,6 +15,11 @@ Permite gerenciar serviços, profissionais e agendamentos de forma flexível par
 6. [Permissões](#permissões)
 7. [Exemplos Práticos](#exemplos-práticos)
 
+## 📚 Documentação Detalhada
+
+- [Services CRUD](./services-crud.md) - Documentação completa de Services
+- [Providers CRUD](./providers-crud.md) - Documentação completa de Providers
+
 ---
 
 ## 🔎 Visão Geral
@@ -88,16 +93,19 @@ O módulo Agenda é 100% genérico e funciona para diferentes tipos de negócios
 |------------|---------|----------------------------------------------|
 | id         | bigint  | Identificador                                 |
 | tenant_id  | FK      | Referência ao tenant                          |
-| user_id    | FK      | Referência ao usuário (profissional)          |
-| name       | string  | Nome do profissional                          |
+| person_id  | FK      | Referência à pessoa (person)                  |
 | service_ids| json   | Array de IDs dos serviços que o profissional oferece |
 | created_at | datetime| Data de criação                               |
 | updated_at | datetime| Data de atualização                           |
 
 **Índices:**
-- `tenant_id`, `user_id`
+- `tenant_id`, `person_id`
 
-**Observação:** `service_ids` é um array JSON. Exemplo: `[1, 2, 3]`
+**Observação:** 
+- `service_ids` é um array JSON. Exemplo: `[1, 2, 3]`
+- Provider está vinculado a Person, que está vinculado a User
+- A foto (`photo_url`) é armazenada na tabela `persons`, não em `providers`
+- Veja [Providers CRUD](./providers-crud.md) para documentação completa
 
 ---
 
@@ -172,11 +180,16 @@ O módulo Agenda é 100% genérico e funciona para diferentes tipos de negócios
 
 **Relacionamentos:**
 - `belongsTo(Tenant)` – Pertence a um tenant
-- `belongsTo(User)` – Pertence a um usuário (profissional)
+- `belongsTo(Person)` – Pertence a uma pessoa
 - `hasMany(Appointment)` – Tem muitos agendamentos
 
 **Casts:**
 - `service_ids` → array (JSON)
+
+**Observação:** 
+- Provider → Person → User (cadeia de relacionamentos)
+- A foto é armazenada em `persons.photo_url`
+- Veja [Providers CRUD](./providers-crud.md) para documentação completa
 
 ---
 
@@ -340,90 +353,24 @@ Todas as rotas estão sob o prefixo `/api/agenda` e requerem autenticação (`au
 
 ### Providers
 
-#### Listar Profissionais
-**GET** `/api/agenda/providers`
+**📖 Documentação Completa:** [Providers CRUD](./providers-crud.md)
 
-**Permissão:** `agenda.providers.view`
+#### Resumo das Rotas
 
-**Resposta (200):**
-```json
-[
-  {
-    "id": 1,
-    "tenant_id": 1,
-    "user_id": 5,
-    "name": "João Silva",
-    "service_ids": [1, 2, 3],
-    "user": {
-      "id": 5,
-      "name": "João Silva",
-      "email": "joao@example.com"
-    },
-    "created_at": "2025-12-03T10:00:00.000000Z",
-    "updated_at": "2025-12-03T10:00:00.000000Z"
-  }
-]
-```
+- **GET** `/api/agenda/providers` - Lista providers (`agenda.providers.view`)
+- **GET** `/api/agenda/providers/{id}` - Busca provider por ID (`agenda.providers.view`)
+- **POST** `/api/agenda/providers` - Cria provider (`agenda.providers.create`)
+- **PUT/PATCH** `/api/agenda/providers/{id}` - Atualiza provider (`agenda.providers.edit`)
+- **DELETE** `/api/agenda/providers/{id}` - Remove provider (`agenda.providers.delete`)
 
----
+**Características:**
+- Criação completa: User → Person → Provider
+- Upload de foto (armazenada em `persons.photo_url`)
+- Permissões automáticas atribuídas ao criar
+- Suporte a múltiplos serviços (`service_ids`)
+- Resposta inclui dados completos de User, Person e Services
 
-#### Buscar Profissional por ID
-**GET** `/api/agenda/providers/{id}`
-
-**Permissão:** `agenda.providers.view`
-
-**Resposta (200):** Mesmo formato do listar
-
----
-
-#### Criar Profissional
-**POST** `/api/agenda/providers`
-
-**Permissão:** `agenda.providers.create`
-
-**Payload:**
-```json
-{
-  "user_id": 5,
-  "name": "João Silva",
-  "service_ids": [1, 2, 3]
-}
-```
-
-**Validação:**
-- `user_id` – obrigatório, deve existir em `users`
-- `name` – obrigatório, string, max:255
-- `service_ids` – opcional, array de integers, cada ID deve existir em `services`
-
-**Resposta (201):** Mesmo formato do listar
-
----
-
-#### Atualizar Profissional
-**PUT/PATCH** `/api/agenda/providers/{id}`
-
-**Permissão:** `agenda.providers.edit`
-
-**Payload:** Mesmos campos do criar (todos opcionais)
-
-**Resposta (200):** Mesmo formato do listar
-
----
-
-#### Excluir Profissional
-**DELETE** `/api/agenda/providers/{id}`  
-**DELETE** `/api/agenda/providers/batch`  
-**DELETE** `/api/agenda/providers`
-
-**Permissão:** `agenda.providers.delete`
-
-**Resposta (200):**
-```json
-{
-  "message": "Profissional excluído com sucesso",
-  "deleted": [1]
-}
-```
+**Veja [Providers CRUD](./providers-crud.md) para detalhes completos, exemplos de payload e respostas.**
 
 ---
 

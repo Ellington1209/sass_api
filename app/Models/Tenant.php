@@ -52,5 +52,10 @@ class Tenant extends Model
     {
         return $this->hasMany(Student::class);
     }
+
+    public function whatsappInstances()
+    {
+        return $this->hasMany(WhatsappInstance::class);
+    }
 }
 
