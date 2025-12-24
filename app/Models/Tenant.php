@@ -57,5 +57,10 @@ class Tenant extends Model
     {
         return $this->hasMany(WhatsappInstance::class);
     }
+
+    public function businessHours()
+    {
+        return $this->hasMany(TenantBusinessHour::class);
+    }
 }
 

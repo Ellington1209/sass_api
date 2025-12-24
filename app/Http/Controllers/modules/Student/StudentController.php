@@ -45,6 +45,29 @@ class StudentController
     }
 
     /**
+     * Lista todos os clientes (sem paginação, com todos os dados)
+     */
+    public function clients(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id ?? $request->user()->tenantUsers()->first()?->tenant_id;
+        
+        if (!$tenantId) {
+            return response()->json([
+                'message' => 'Tenant não identificado',
+            ], 400);
+        }
+
+        $filters = $request->only(['status', 'category', 'search']);
+        
+        $clients = $this->studentService->getAllClients($tenantId, $filters);
+
+        return response()->json([
+            'data' => $clients,
+            'total' => count($clients),
+        ]);
+    }
+
+    /**
      * Exibe um aluno específico
      */
     public function show(Request $request, int $id): JsonResponse

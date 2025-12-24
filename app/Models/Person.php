@@ -51,5 +51,10 @@ class Person extends Model
     {
         return $this->hasOne(Student::class);
     }
+
+    public function provider(): HasOne
+    {
+        return $this->hasOne(Provider::class);
+    }
 }
 

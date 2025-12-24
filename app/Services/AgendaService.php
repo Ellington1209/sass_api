@@ -7,11 +7,15 @@ use App\Models\Provider;
 use App\Models\Service;
 use App\Models\ServicePrice;
 use App\Models\TenantModule;
+use App\Services\Agenda\AvailabilityService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AgendaService
 {
+    public function __construct(
+        private AvailabilityService $availabilityService
+    ) {}
     public function createService(?int $tenantId, array $data): array
     {
         return DB::transaction(function () use ($tenantId, $data) {
@@ -305,6 +309,37 @@ class AgendaService
         }
         $data['date_end'] = $dateEnd->format('Y-m-d H:i:s');
 
+        // Busca o provider e tenant
+        $provider = Provider::find($data['provider_id']);
+        if (!$provider) {
+            throw new \Exception('Profissional não encontrado', 404);
+        }
+
+        $tenant = null;
+        if ($tenantId !== null) {
+            $tenant = \App\Models\Tenant::find($tenantId);
+            if (!$tenant) {
+                throw new \Exception('Tenant não encontrado', 404);
+            }
+        }
+
+        // ORDEM DE VALIDAÇÃO (HIERARQUIA CORRETA):
+        // 1. HORÁRIO DO TENANT (primeiro - nada pode acontecer fora)
+        if ($tenant && !$this->availabilityService->isWithinTenantHours($tenant, $data['date_start'], $data['date_end'])) {
+            throw new \Exception('Fora do horário de funcionamento do estabelecimento', 422);
+        }
+
+        // 2. HORÁRIO DO PROFISSIONAL (sempre dentro do tenant)
+        if (!$this->availabilityService->isWithinAvailability($provider, $data['date_start'], $data['date_end'])) {
+            throw new \Exception('Fora do horário de disponibilidade do profissional', 422);
+        }
+
+        // 3. BLOQUEIOS
+        if ($this->availabilityService->hasBlock($provider, $data['date_start'], $data['date_end'])) {
+            throw new \Exception('Horário bloqueado', 422);
+        }
+
+        // 4. CONFLITOS COM OUTROS AGENDAMENTOS
         $conflicts = $this->checkConflicts(
             $tenantId,
             $data['provider_id'],
@@ -359,6 +394,37 @@ class AgendaService
         $dateStart = $data['date_start'] ?? $appointment->date_start;
         $dateEnd = $data['date_end'] ?? $appointment->date_end;
 
+        // Busca o provider e tenant
+        $provider = Provider::find($providerId);
+        if (!$provider) {
+            throw new \Exception('Profissional não encontrado', 404);
+        }
+
+        $tenant = null;
+        if ($tenantId !== null) {
+            $tenant = \App\Models\Tenant::find($tenantId);
+            if (!$tenant) {
+                throw new \Exception('Tenant não encontrado', 404);
+            }
+        }
+
+        // ORDEM DE VALIDAÇÃO (HIERARQUIA CORRETA):
+        // 1. HORÁRIO DO TENANT (primeiro - nada pode acontecer fora)
+        if ($tenant && !$this->availabilityService->isWithinTenantHours($tenant, $dateStart, $dateEnd)) {
+            throw new \Exception('Fora do horário de funcionamento do estabelecimento', 422);
+        }
+
+        // 2. HORÁRIO DO PROFISSIONAL (sempre dentro do tenant)
+        if (!$this->availabilityService->isWithinAvailability($provider, $dateStart, $dateEnd)) {
+            throw new \Exception('Fora do horário de disponibilidade do profissional', 422);
+        }
+
+        // 3. BLOQUEIOS
+        if ($this->availabilityService->hasBlock($provider, $dateStart, $dateEnd)) {
+            throw new \Exception('Horário bloqueado', 422);
+        }
+
+        // 4. CONFLITOS COM OUTROS AGENDAMENTOS
         $conflicts = $this->checkConflicts(
             $tenantId,
             $providerId,
@@ -418,9 +484,47 @@ class AgendaService
 
         $appointments = $query->orderBy('date_start')->get();
 
-        return $appointments->map(function ($appointment) {
+        $formattedAppointments = $appointments->map(function ($appointment) {
             return $this->formatAppointment($appointment);
         })->toArray();
+
+        // Se houver filtros de data ou provider_id, inclui informações adicionais
+        $hasDateFilters = isset($filters['date_start']) || isset($filters['date_end']);
+        $hasProviderFilter = isset($filters['provider_id']);
+
+        if ($hasDateFilters || $hasProviderFilter) {
+            $start = $filters['date_start'] ?? null;
+            $end = $filters['date_end'] ?? null;
+
+            // Busca horário de funcionamento do tenant (sempre quando houver filtros)
+            $tenantBusinessHours = [];
+            if ($tenantId !== null) {
+                $tenantBusinessHourService = new \App\Services\Agenda\TenantBusinessHourService();
+                $tenantBusinessHours = $tenantBusinessHourService->getBusinessHours($tenantId)->toArray();
+            }
+
+            // Se houver filtro por provider_id, inclui disponibilidades e bloqueios
+            if ($hasProviderFilter) {
+                $providerId = $filters['provider_id'];
+                $availabilities = $this->availabilityService->getAvailabilities($providerId);
+                $blocks = $this->availabilityService->getBlocks($providerId, $start, $end);
+
+                return [
+                    'appointments' => $formattedAppointments,
+                    'tenant_business_hours' => $tenantBusinessHours,
+                    'availabilities' => $availabilities->toArray(),
+                    'blocks' => $blocks->toArray(),
+                ];
+            }
+
+            // Se não houver provider_id mas houver filtros de data, retorna pelo menos o horário do tenant
+            return [
+                'appointments' => $formattedAppointments,
+                'tenant_business_hours' => $tenantBusinessHours,
+            ];
+        }
+
+        return $formattedAppointments;
     }
 
     public function getAppointmentById(int $id, ?int $tenantId): ?array
@@ -438,6 +542,44 @@ class AgendaService
         }
 
         return $this->formatAppointment($appointment);
+    }
+
+    /**
+     * Busca agenda completa: horários do tenant, disponibilidades, bloqueios e agendamentos
+     */
+    public function getAgenda(int $providerId, ?int $tenantId, ?string $start = null, ?string $end = null): array
+    {
+        $provider = Provider::find($providerId);
+        if (!$provider) {
+            throw new \Exception('Profissional não encontrado', 404);
+        }
+
+        $tenantBusinessHours = [];
+        if ($tenantId !== null) {
+            $tenantBusinessHourService = new \App\Services\Agenda\TenantBusinessHourService();
+            $tenantBusinessHours = $tenantBusinessHourService->getBusinessHours($tenantId)->toArray();
+        }
+
+        $availabilities = $this->availabilityService->getAvailabilities($providerId);
+        $blocks = $this->availabilityService->getBlocks($providerId, $start, $end);
+        
+        $filters = [];
+        if ($start) {
+            $filters['date_start'] = $start;
+        }
+        if ($end) {
+            $filters['date_end'] = $end;
+        }
+        $filters['provider_id'] = $providerId;
+
+        $schedules = $this->getAllAppointments($tenantId, $filters);
+
+        return [
+            'tenant_business_hours' => $tenantBusinessHours,
+            'availabilities' => $availabilities->toArray(),
+            'blocks' => $blocks->toArray(),
+            'schedules' => $schedules,
+        ];
     }
 
     public function checkConflicts(int $tenantId, int $providerId, string $dateStart, string $dateEnd, ?int $excludeId = null): array
@@ -562,8 +704,8 @@ class AgendaService
             'service_id' => $appointment->service_id,
             'provider_id' => $appointment->provider_id,
             'client_id' => $appointment->client_id,
-            'date_start' => $appointment->date_start?->toISOString(),
-            'date_end' => $appointment->date_end?->toISOString(),
+            'date_start' => $appointment->date_start?->format('Y-m-d\TH:i:s'),
+            'date_end' => $appointment->date_end?->format('Y-m-d\TH:i:s'),
             'status_agenda_id' => $appointment->status_agenda_id,
             'notes' => $appointment->notes,
             'service' => $appointment->service ? [

@@ -54,9 +54,9 @@ class User extends Authenticatable
         return $this->tenantUsers()->exists();
     }
 
-    public function student()
+    public function person()
     {
-        return $this->hasOne(Student::class);
+        return $this->hasOne(Person::class);
     }
 
     public function files()

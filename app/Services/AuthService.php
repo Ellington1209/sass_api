@@ -93,6 +93,36 @@ class AuthService
     }
 
     /**
+     * Determina o tipo/role do usuário
+     */
+    private function getUserRole(User $user): string
+    {
+        // Super admin
+        if ($user->is_super_admin) {
+            return 'super admin';
+        }
+
+        // Tenant admin
+        if ($user->isTenantAdmin()) {
+            return 'tenant admin';
+        }
+
+        // Verifica se é cliente/aluno (através de Person -> Student)
+        $user->load('person.student', 'person.provider');
+        if ($user->person && $user->person->student) {
+            return 'tenant cliente';
+        }
+
+        // Verifica se é profissional (através de Person -> Provider)
+        if ($user->person && $user->person->provider) {
+            return 'tenant profissional';
+        }
+
+        // Usuário normal do tenant
+        return 'tenant';
+    }
+
+    /**
      * Obtém os módulos do usuário
      */
     private function getUserModules(User $user): array
@@ -146,7 +176,7 @@ class AuthService
         }
 
         // Recarrega os relacionamentos para garantir que estão atualizados
-        $user->load(['tenantUsers.tenant.modules']);
+        $user->load(['tenantUsers.tenant.modules', 'person.student', 'person.provider']);
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
@@ -167,9 +197,7 @@ class AuthService
                 'name' => $user->name,
                 'email' => $user->email,
                 'tenant_id' => $user->is_super_admin ? null : $tenantId,
-                'is_super_admin' => $user->is_super_admin,
-                'is_tenant_admin' => $isTenantAdmin,
-                'is_tenant' => !$user->is_super_admin && $tenantId !== null,
+                'role' => $this->getUserRole($user),
             ],
             'permissions' => $this->getUserPermissions($user),
             'modules' => $this->getUserModules($user),
@@ -179,7 +207,7 @@ class AuthService
 
     public function getMe(User $user): array
     {
-        $user->load(['userPermissions', 'tenant.modules', 'tenantUsers.tenant.modules']);
+        $user->load(['userPermissions', 'tenant.modules', 'tenantUsers.tenant.modules', 'person.student', 'person.provider']);
 
         // Determina se é admin do tenant
         $isTenantAdmin = $user->isTenantAdmin();
@@ -198,9 +226,7 @@ class AuthService
                 'name' => $user->name,
                 'email' => $user->email,
                 'tenant_id' => $user->is_super_admin ? null : $tenantId,
-                'is_super_admin' => $user->is_super_admin,
-                'is_tenant_admin' => $isTenantAdmin,
-                'is_tenant' => !$user->is_super_admin && $tenantId !== null,
+                'role' => $this->getUserRole($user),
             ],
             'permissions' => $this->getUserPermissions($user),
             'modules' => $this->getUserModules($user),

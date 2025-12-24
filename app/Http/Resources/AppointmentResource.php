@@ -15,8 +15,8 @@ class AppointmentResource extends JsonResource
             'service_id' => $this->service_id,
             'provider_id' => $this->provider_id,
             'client_id' => $this->client_id,
-            'date_start' => $this->date_start?->toISOString(),
-            'date_end' => $this->date_end?->toISOString(),
+            'date_start' => $this->date_start?->format('Y-m-d\TH:i:s'),
+            'date_end' => $this->date_end?->format('Y-m-d\TH:i:s'),
             'status_agenda_id' => $this->status_agenda_id,
             'notes' => $this->notes,
             'service' => $this->whenLoaded('service', function () {

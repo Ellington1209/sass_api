@@ -38,5 +38,15 @@ class Provider extends Model
     {
         return $this->hasMany(Appointment::class);
     }
+
+    public function availabilities(): HasMany
+    {
+        return $this->hasMany(ProfessionalAvailability::class);
+    }
+
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(ProfessionalBlock::class);
+    }
 }
 

@@ -227,5 +227,50 @@ class AppointmentController
 
         return response()->json($response);
     }
+
+    /**
+     * Busca agenda completa: disponibilidades, bloqueios e agendamentos
+     */
+    public function getAgenda(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $tenantId = null;
+
+        if (!$user->is_super_admin) {
+            $tenantId = $user->tenant_id ?? $user->tenantUsers()->first()?->tenant_id;
+            
+            if (!$tenantId) {
+                return response()->json([
+                    'message' => 'Tenant não identificado',
+                ], 400);
+            }
+        }
+
+        $validator = Validator::make($request->all(), [
+            'provider_id' => 'required|exists:providers,id',
+            'start' => 'nullable|date',
+            'end' => 'nullable|date|after_or_equal:start',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Erro na validação',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $providerId = $request->input('provider_id');
+        $start = $request->input('start');
+        $end = $request->input('end');
+
+        try {
+            $agenda = $this->agendaService->getAgenda($providerId, $tenantId, $start, $end);
+            return response()->json($agenda);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], $e->getCode() ?: 400);
+        }
+    }
 }
 

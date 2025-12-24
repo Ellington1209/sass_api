@@ -19,6 +19,7 @@ Permite gerenciar serviços, profissionais e agendamentos de forma flexível par
 
 - [Services CRUD](./services-crud.md) - Documentação completa de Services
 - [Providers CRUD](./providers-crud.md) - Documentação completa de Providers
+- [Appointments CRUD](./appointments-crud.md) - Documentação completa de Appointments
 
 ---
 
@@ -37,6 +38,9 @@ O módulo Agenda é 100% genérico e funciona para diferentes tipos de negócios
 2. **Providers** – Profissionais que prestam os serviços (ex: instrutores, barbeiros)
 3. **Appointments** – Agendamentos dos clientes
 4. **Status Agenda** – Status dos agendamentos (agendado, confirmado, concluído, etc.)
+5. **Tenant Business Hours** – Horários de funcionamento do estabelecimento (tenant)
+6. **Professional Availabilities** – Horários de disponibilidade dos profissionais
+7. **Professional Blocks** – Bloqueios de horários (folgas, almoços, indisponibilidades)
 
 ---
 
@@ -156,6 +160,81 @@ O módulo Agenda é 100% genérico e funciona para diferentes tipos de negócios
 
 ---
 
+### ▸ tenant_business_hours
+
+| Campo      | Tipo    | Descrição                                    |
+|------------|---------|----------------------------------------------|
+| id         | bigint  | Identificador                                 |
+| tenant_id  | FK      | Referência ao tenant                          |
+| weekday    | integer | Dia da semana (0 = domingo, 6 = sábado)      |
+| start_time | time    | Horário de início (ex: "09:00:00")           |
+| end_time   | time    | Horário de término (ex: "19:00:00")          |
+| active     | boolean | Se o horário está ativo                       |
+| created_at | datetime| Data de criação                               |
+| updated_at | datetime| Data de atualização                           |
+
+**Índices:**
+- `tenant_id`, `weekday` (único)
+- `tenant_id`, `active`
+
+**Observação:** Define o horário de funcionamento do estabelecimento. Nada pode acontecer fora deste horário.
+
+**Exemplos:**
+- Barbearia → 09:00–19:00
+- Autoescola → 07:00–19:00
+
+---
+
+### ▸ professional_availabilities
+
+| Campo      | Tipo    | Descrição                                    |
+|------------|---------|----------------------------------------------|
+| id         | bigint  | Identificador                                 |
+| provider_id| FK      | Referência ao profissional                   |
+| weekday    | integer | Dia da semana (0 = domingo, 6 = sábado)      |
+| start_time | time    | Horário de início (ex: "08:00:00")           |
+| end_time   | time    | Horário de término (ex: "18:00:00")          |
+| active     | boolean | Se a disponibilidade está ativa               |
+| created_at | datetime| Data de criação                               |
+| updated_at | datetime| Data de atualização                           |
+
+**Índices:**
+- `provider_id`, `weekday` (único)
+- `provider_id`, `active`
+
+**Observação:** Define os horários de trabalho do profissional. O profissional não pode ultrapassar o horário do tenant.
+
+---
+
+### ▸ professional_blocks
+
+| Campo      | Tipo     | Descrição                                    |
+|------------|----------|----------------------------------------------|
+| id         | bigint   | Identificador                                 |
+| provider_id| FK       | Referência ao profissional                   |
+| tenant_id  | FK       | Referência ao tenant                          |
+| start_at   | datetime | Data/hora de início do bloqueio               |
+| end_at     | datetime | Data/hora de término do bloqueio              |
+| reason     | string   | Motivo do bloqueio (ex: "Almoço", "Folga")   |
+| created_by | FK       | Referência ao usuário que criou o bloqueio    |
+| created_at | datetime | Data de criação                               |
+| updated_at | datetime | Data de atualização                           |
+
+**Índices:**
+- `provider_id`, `start_at`, `end_at`
+- `tenant_id`, `start_at`, `end_at`
+
+**Observação:** Bloqueios dinâmicos (pontuais ou recorrentes) que impedem agendamentos no período.
+
+**Exemplos de uso:**
+- Almoço
+- Folga
+- Horário que o profissional não quer atender mais
+- Reunião
+- Aula teórica
+
+---
+
 ## 🔗 Models e Relacionamentos
 
 ### Service Model
@@ -182,6 +261,8 @@ O módulo Agenda é 100% genérico e funciona para diferentes tipos de negócios
 - `belongsTo(Tenant)` – Pertence a um tenant
 - `belongsTo(Person)` – Pertence a uma pessoa
 - `hasMany(Appointment)` – Tem muitos agendamentos
+- `hasMany(ProfessionalAvailability)` – Tem muitas disponibilidades
+- `hasMany(ProfessionalBlock)` – Tem muitos bloqueios
 
 **Casts:**
 - `service_ids` → array (JSON)
@@ -190,6 +271,58 @@ O módulo Agenda é 100% genérico e funciona para diferentes tipos de negócios
 - Provider → Person → User (cadeia de relacionamentos)
 - A foto é armazenada em `persons.photo_url`
 - Veja [Providers CRUD](./providers-crud.md) para documentação completa
+
+---
+
+### Tenant Model
+
+**Localização:** `app/Models/Tenant.php`
+
+**Relacionamentos:**
+- `hasMany(TenantBusinessHour)` – Tem muitos horários de funcionamento
+
+**Observação:** 
+- Define o horário de funcionamento do estabelecimento
+- Nada pode acontecer fora do horário do tenant
+
+---
+
+### TenantBusinessHour Model
+
+**Localização:** `app/Models/TenantBusinessHour.php`
+
+**Relacionamentos:**
+- `belongsTo(Tenant)` – Pertence a um tenant
+
+**Casts:**
+- `active` → boolean
+
+---
+
+### ProfessionalAvailability Model
+
+**Localização:** `app/Models/ProfessionalAvailability.php`
+
+**Relacionamentos:**
+- `belongsTo(Provider)` – Pertence a um profissional
+
+**Casts:**
+- `active` → boolean
+
+---
+
+### ProfessionalBlock Model
+
+**Localização:** `app/Models/ProfessionalBlock.php`
+
+**Relacionamentos:**
+- `belongsTo(Provider)` – Pertence a um profissional
+- `belongsTo(Tenant)` – Pertence a um tenant
+- `belongsTo(User, 'created_by')` – Usuário que criou o bloqueio
+
+**Casts:**
+- `start_at` → datetime
+- `end_at` → datetime
 
 ---
 
@@ -374,9 +507,295 @@ Todas as rotas estão sob o prefixo `/api/agenda` e requerem autenticação (`au
 
 ---
 
+### Agenda Completa
+
+#### Buscar Agenda Completa
+**GET** `/api/agenda`
+
+**Permissão:** `agenda.appointments.view`
+
+**Query Parameters (obrigatórios):**
+- `provider_id` – ID do profissional (integer)
+- `start` – Data de início do período (opcional, formato: YYYY-MM-DD)
+- `end` – Data de fim do período (opcional, formato: YYYY-MM-DD)
+
+**Resposta (200):**
+```json
+{
+  "tenant_business_hours": [
+    {
+      "id": 1,
+      "tenant_id": 1,
+      "weekday": 1,
+      "start_time": "09:00:00",
+      "end_time": "19:00:00",
+      "active": true
+    }
+  ],
+  "availabilities": [
+    {
+      "id": 1,
+      "provider_id": 2,
+      "weekday": 1,
+      "start_time": "10:00:00",
+      "end_time": "18:00:00",
+      "active": true
+    }
+  ],
+  "blocks": [
+    {
+      "id": 1,
+      "provider_id": 2,
+      "tenant_id": 1,
+      "start_at": "2025-12-20T12:00:00",
+      "end_at": "2025-12-20T13:00:00",
+      "reason": "Almoço",
+      "created_by": 1
+    }
+  ],
+  "schedules": [
+    {
+      "id": 1,
+      "date_start": "2025-12-20T14:30:00",
+      "date_end": "2025-12-20T15:00:00",
+      "service": {...},
+      "client": {...}
+    }
+  ]
+}
+```
+
+**Observação:** Retorna todos os dados necessários para montar a agenda: horários do tenant, disponibilidades do profissional, bloqueios e agendamentos.
+
+---
+
+### Horários de Funcionamento do Tenant
+
+#### Listar Horários
+**GET** `/api/tenants/{tenantId}/business-hours`
+
+**Permissão:** `agenda.providers.view` (ou permissão de admin do tenant)
+
+**Resposta (200):**
+```json
+[
+  {
+    "id": 1,
+    "tenant_id": 1,
+    "weekday": 1,
+    "start_time": "09:00:00",
+    "end_time": "19:00:00",
+    "active": true,
+    "created_at": "2025-12-21T10:00:00.000000Z",
+    "updated_at": "2025-12-21T10:00:00.000000Z"
+  }
+]
+```
+
+---
+
+#### Criar Horário
+**POST** `/api/tenants/{tenantId}/business-hours`
+
+**Permissão:** `agenda.providers.edit` (ou permissão de admin do tenant)
+
+**Payload:**
+```json
+{
+  "weekday": 1,
+  "start_time": "09:00:00",
+  "end_time": "19:00:00",
+  "active": true
+}
+```
+
+**Validação:**
+- `weekday` – obrigatório, integer (0-6, onde 0 = domingo)
+- `start_time` – obrigatório, formato H:i:s
+- `end_time` – obrigatório, formato H:i:s, deve ser após `start_time`
+- `active` – opcional, boolean (padrão: true)
+
+---
+
+#### Sincronizar Múltiplos Horários
+**POST** `/api/tenants/{tenantId}/business-hours/sync`
+
+**Permissão:** `agenda.providers.edit`
+
+**Payload:**
+```json
+{
+  "business_hours": [
+    {
+      "weekday": 1,
+      "start_time": "09:00:00",
+      "end_time": "19:00:00",
+      "active": true
+    },
+    {
+      "weekday": 2,
+      "start_time": "09:00:00",
+      "end_time": "19:00:00",
+      "active": true
+    }
+  ]
+}
+```
+
+**Observação:** Cria ou atualiza os horários conforme o `weekday`. Útil para configurar a semana toda de uma vez.
+
+---
+
+#### Atualizar Horário
+**PUT/PATCH** `/api/tenants/{tenantId}/business-hours/{id}`
+
+**Permissão:** `agenda.providers.edit`
+
+**Payload:** Mesmos campos do criar (todos opcionais)
+
+---
+
+#### Excluir Horário
+**DELETE** `/api/tenants/{tenantId}/business-hours/{id}`
+
+**Permissão:** `agenda.providers.edit`
+
+---
+
+### Disponibilidades do Profissional
+
+#### Listar Disponibilidades
+**GET** `/api/agenda/providers/{providerId}/availabilities`
+
+**Permissão:** `agenda.providers.view`
+
+**Resposta (200):**
+```json
+[
+  {
+    "id": 1,
+    "provider_id": 2,
+    "weekday": 1,
+    "start_time": "10:00:00",
+    "end_time": "18:00:00",
+    "active": true
+  }
+]
+```
+
+---
+
+#### Criar Disponibilidade
+**POST** `/api/agenda/providers/{providerId}/availabilities`
+
+**Permissão:** `agenda.providers.edit`
+
+**Payload:**
+```json
+{
+  "weekday": 1,
+  "start_time": "10:00:00",
+  "end_time": "18:00:00",
+  "active": true
+}
+```
+
+**Validação:**
+- `weekday` – obrigatório, integer (0-6)
+- `start_time` – obrigatório, formato H:i:s
+- `end_time` – obrigatório, formato H:i:s, deve ser após `start_time`
+- `active` – opcional, boolean (padrão: true)
+
+**Observação:** O horário do profissional não pode ultrapassar o horário do tenant.
+
+---
+
+#### Atualizar Disponibilidade
+**PUT/PATCH** `/api/agenda/providers/{providerId}/availabilities/{id}`
+
+**Permissão:** `agenda.providers.edit`
+
+---
+
+#### Excluir Disponibilidade
+**DELETE** `/api/agenda/providers/{providerId}/availabilities/{id}`
+
+**Permissão:** `agenda.providers.edit`
+
+---
+
+### Bloqueios do Profissional
+
+#### Listar Bloqueios
+**GET** `/api/agenda/providers/{providerId}/blocks`
+
+**Permissão:** `agenda.providers.view`
+
+**Query Parameters (opcionais):**
+- `start` – Filtrar bloqueios a partir desta data
+- `end` – Filtrar bloqueios até esta data
+
+**Resposta (200):**
+```json
+[
+  {
+    "id": 1,
+    "provider_id": 2,
+    "tenant_id": 1,
+    "start_at": "2025-12-20T12:00:00",
+    "end_at": "2025-12-20T13:00:00",
+    "reason": "Almoço",
+    "created_by": 1,
+    "created_at": "2025-12-20T10:00:00.000000Z",
+    "updated_at": "2025-12-20T10:00:00.000000Z"
+  }
+]
+```
+
+---
+
+#### Criar Bloqueio
+**POST** `/api/agenda/providers/{providerId}/blocks`
+
+**Permissão:** `agenda.providers.edit`
+
+**Payload:**
+```json
+{
+  "start_at": "2025-12-20 12:00:00",
+  "end_at": "2025-12-20 13:00:00",
+  "reason": "Almoço"
+}
+```
+
+**Validação:**
+- `start_at` – obrigatório, formato datetime
+- `end_at` – obrigatório, formato datetime, deve ser após `start_at`
+- `reason` – opcional, string, max:255
+
+**Observação:** O `created_by` é preenchido automaticamente com o ID do usuário autenticado.
+
+---
+
+#### Atualizar Bloqueio
+**PUT/PATCH** `/api/agenda/providers/{providerId}/blocks/{id}`
+
+**Permissão:** `agenda.providers.edit`
+
+---
+
+#### Excluir Bloqueio
+**DELETE** `/api/agenda/providers/{providerId}/blocks/{id}`
+
+**Permissão:** `agenda.providers.edit`
+
+---
+
 ### Appointments
 
-#### Listar Agendamentos
+**📖 Documentação Completa:** [Appointments CRUD](./appointments-crud.md)
+
+#### Resumo das Rotas
 **GET** `/api/agenda/appointments`
 
 **Permissão:** `agenda.appointments.view`
@@ -531,9 +950,67 @@ date_end = date_start + duration_minutes (do serviço)
 
 ---
 
-### 2. Validação de Conflito de Horário
+### 2. Hierarquia de Validação de Agendamentos (REGRA MESTRE)
 
-O sistema impede que um profissional tenha dois agendamentos no mesmo horário.
+🧠 **CONCEITO-CHAVE:** Nada pode acontecer fora do horário do TENANT, mesmo que o profissional esteja disponível.
+
+**Ordem de validação (hierarquia correta):**
+
+```
+HORÁRIO DO TENANT
+   ↓
+HORÁRIO DO PROFISSIONAL
+   ↓
+BLOQUEIOS
+   ↓
+AGENDAMENTO
+```
+
+#### 2.1. Validação do Horário do Tenant (PRIMEIRO)
+
+**Validação:**
+- Verifica se o horário do agendamento está dentro do horário de funcionamento do tenant
+- Consulta a tabela `tenant_business_hours` pelo `weekday` (dia da semana)
+- Compara apenas o horário (HH:mm:ss), ignorando a data
+
+**Erro retornado:** 422 com mensagem "Fora do horário de funcionamento do estabelecimento"
+
+**Exemplo:**
+- Tenant funciona: 09:00–19:00
+- Tentativa de agendamento: 08:00
+- ❌ **ERRO:** Fora do horário do tenant
+
+#### 2.2. Validação do Horário do Profissional
+
+**Validação:**
+- Verifica se o horário está dentro da disponibilidade do profissional
+- Consulta a tabela `professional_availabilities` pelo `weekday`
+- O profissional não pode ultrapassar o horário do tenant
+
+**Erro retornado:** 422 com mensagem "Fora do horário de disponibilidade do profissional"
+
+**Exemplo:**
+- Tenant funciona: 09:00–19:00
+- Profissional disponível: 10:00–18:00
+- Tentativa de agendamento: 09:30
+- ❌ **ERRO:** Fora do horário do profissional (mesmo estando dentro do tenant)
+
+#### 2.3. Validação de Bloqueios
+
+**Validação:**
+- Verifica se há bloqueio no horário do agendamento
+- Consulta a tabela `professional_blocks` por sobreposição de horários
+- Considera bloqueios que se sobrepõem ao agendamento
+
+**Erro retornado:** 422 com mensagem "Horário bloqueado"
+
+**Exemplos de bloqueios:**
+- Almoço
+- Folga
+- Reunião
+- Aula teórica
+
+#### 2.4. Validação de Conflito com Outros Agendamentos
 
 **Validação:**
 - Verifica se existe agendamento do mesmo `provider_id` que se sobreponha ao horário
@@ -543,6 +1020,8 @@ O sistema impede que um profissional tenha dois agendamentos no mesmo horário.
   - O novo agendamento engloba completamente outro agendamento
 
 **Erro retornado:** 422 com mensagem "Conflito de horário detectado"
+
+**⚠️ IMPORTANTE:** A ordem de validação NÃO pode ser invertida. Se inverter, vai dar bug.
 
 ---
 
@@ -805,6 +1284,27 @@ console.log(appointment.data);
 }
 ```
 
+**Fora do horário do tenant:**
+```json
+{
+  "message": "Fora do horário de funcionamento do estabelecimento"
+}
+```
+
+**Fora do horário do profissional:**
+```json
+{
+  "message": "Fora do horário de disponibilidade do profissional"
+}
+```
+
+**Horário bloqueado:**
+```json
+{
+  "message": "Horário bloqueado"
+}
+```
+
 **Conflito de horário:**
 ```json
 {
@@ -880,5 +1380,37 @@ php artisan db:seed --class=ServiceSeeder
 
 ---
 
-**Documentação atualizada em:** 2025-12-03
+---
+
+## 📅 Status Agenda
+
+### Listar Status
+**GET** `/api/status-agenda`
+
+**Permissão:** Não requer (autenticação apenas)
+
+**Resposta (200):**
+```json
+[
+  {
+    "id": 1,
+    "key": "agendado",
+    "name": "Agendado",
+    "description": "Agendamento confirmado",
+    "order": 1,
+    "active": true
+  }
+]
+```
+
+---
+
+### Buscar Status por ID
+**GET** `/api/status-agenda/{id}`
+
+**Permissão:** Não requer (autenticação apenas)
+
+---
+
+**Documentação atualizada em:** 2025-12-21
 

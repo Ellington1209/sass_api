@@ -84,6 +84,59 @@ class StudentService
     }
 
     /**
+     * Obtém todos os clientes do tenant sem paginação (com todos os dados)
+     */
+    public function getAllClients(int $tenantId, ?array $filters = null): array
+    {
+        $query = Student::where('tenant_id', $tenantId)
+            ->with(['person.user', 'statusStudent', 'documents', 'notes.user']);
+
+        // Filtros opcionais
+        if ($filters) {
+            if (isset($filters['status'])) {
+                // Pode ser status_students_id ou key do status
+                if (is_numeric($filters['status'])) {
+                    $query->where('status_students_id', $filters['status']);
+                } else {
+                    $query->whereHas('statusStudent', function ($q) use ($filters) {
+                        $q->where('key', $filters['status']);
+                    });
+                }
+            }
+            if (isset($filters['category'])) {
+                $query->where('category', $filters['category']);
+            }
+            if (isset($filters['search'])) {
+                $search = $filters['search'];
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('person', function ($personQuery) use ($search) {
+                        $personQuery->where('cpf', 'ilike', "%{$search}%")
+                            ->orWhere('rg', 'ilike', "%{$search}%")
+                            ->orWhere('phone', 'ilike', "%{$search}%")
+                            ->orWhereHas('user', function ($userQuery) use ($search) {
+                                $userQuery->where('name', 'ilike', "%{$search}%")
+                                    ->orWhere('email', 'ilike', "%{$search}%");
+                            });
+                    });
+                });
+            }
+        }
+
+        // Ordenação: por nome do usuário
+        $query->orderByRaw('(SELECT name FROM users WHERE users.id = (SELECT user_id FROM persons WHERE persons.id = students.person_id))');
+
+        // Busca todos os resultados
+        $students = $query->get();
+
+        // Formata os resultados
+        $formattedStudents = $students->map(function ($student) {
+            return $this->formatStudent($student);
+        });
+
+        return $formattedStudents->toArray();
+    }
+
+    /**
      * Obtém um aluno por ID
      */
     public function getById(int $id, int $tenantId): ?array

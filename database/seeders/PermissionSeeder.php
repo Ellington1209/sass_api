@@ -422,70 +422,26 @@ class PermissionSeeder extends Seeder
 
             // ========== MÓDULO AGENDA ==========
             [
-                'key' => 'agenda.services.view',
+                'key' => 'agenda.view',
                 'module_id' => $moduleIds['agenda'],
-                'description' => 'Visualizar serviços',
+                'description' => 'Visualizar agenda',
             ],
             [
-                'key' => 'agenda.services.create',
+                'key' => 'agenda.create',
                 'module_id' => $moduleIds['agenda'],
-                'description' => 'Criar novos serviços',
+                'description' => 'Criar novos agenda',
             ],
             [
-                'key' => 'agenda.services.edit',
+                'key' => 'agenda.edit',
                 'module_id' => $moduleIds['agenda'],
-                'description' => 'Editar serviços existentes',
+                'description' => 'Editar agenda existentes',
             ],
             [
-                'key' => 'agenda.services.delete',
+                'key' => 'agenda.delete',
                 'module_id' => $moduleIds['agenda'],
-                'description' => 'Excluir serviços',
+                'description' => 'Excluir agenda',
             ],
-            [
-                'key' => 'agenda.providers.view',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Visualizar profissionais',
-            ],
-            [
-                'key' => 'agenda.providers.create',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Criar novos profissionais',
-            ],
-            [
-                'key' => 'agenda.providers.edit',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Editar profissionais existentes',
-            ],
-            [
-                'key' => 'agenda.providers.delete',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Excluir profissionais',
-            ],
-            [
-                'key' => 'agenda.appointments.view',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Visualizar agendamentos',
-            ],
-            [
-                'key' => 'agenda.appointments.create',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Criar novos agendamentos',
-            ],
-            [
-                'key' => 'agenda.appointments.edit',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Editar agendamentos existentes',
-            ],
-            [
-                'key' => 'agenda.appointments.delete',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Excluir agendamentos',
-            ],
-            [
-                'key' => 'agenda.manage',
-                'module_id' => $moduleIds['agenda'],
-                'description' => 'Permissão completa de agenda (todas as ações acima)',
-            ],
+           
 
             // ========== MÓDULO AUTO-ESCOLA ==========
             [

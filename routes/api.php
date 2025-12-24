@@ -4,8 +4,12 @@ use App\Http\Controllers\modules\Admin\Module\ModuleController;
 use App\Http\Controllers\modules\Admin\Services\ServiceController as ServicesServiceController;
 use App\Http\Controllers\modules\Admin\Tenant\TenantController;
 use App\Http\Controllers\modules\Agenda\AppointmentController;
+use App\Http\Controllers\modules\Agenda\AvailabilityController;
+use App\Http\Controllers\modules\Agenda\BlockController;
 use App\Http\Controllers\modules\Agenda\ProviderController;
 use App\Http\Controllers\modules\Agenda\ServiceController;
+use App\Http\Controllers\modules\Agenda\StatusAgendaController;
+use App\Http\Controllers\modules\Agenda\TenantBusinessHourController;
 use App\Http\Controllers\modules\Auth\AuthController;
 use App\Http\Controllers\modules\File\FileController;
 use App\Http\Controllers\modules\Permission\PermissionController;
@@ -45,8 +49,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [UserController::class, 'destroy'])->middleware('check.permission:admin.users.delete'); // ID na URL
     });
 
-    // Rotas de Permissões
+    // Rotas de Permissões e Configurações do Tenant
     Route::prefix('tenants')->group(function () {
+        // Horários de funcionamento do tenant (deve vir antes das rotas dinâmicas)
+        Route::prefix('{tenantId}/business-hours')->group(function () {
+            Route::get('/', [TenantBusinessHourController::class, 'index']);
+            Route::post('/', [TenantBusinessHourController::class, 'store']);
+            Route::post('/sync', [TenantBusinessHourController::class, 'sync']);
+            Route::put('/{id}', [TenantBusinessHourController::class, 'update']);
+            Route::patch('/{id}', [TenantBusinessHourController::class, 'update']);
+            Route::delete('/{id}', [TenantBusinessHourController::class, 'destroy']);
+        });
+        
+        // Rotas de Permissões
         Route::get('/{id}/permissions/{user_id}', [PermissionController::class, 'getTenantPermissions']); // Listar permissões do tenant com user_id
         Route::get('/{id}/permissions', [PermissionController::class, 'getTenantPermissions']); // Listar permissões do tenant (sem user_id)
     });
@@ -73,6 +88,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('status-students')->group(function () {
         Route::get('/', [StatusStudentController::class, 'index']);
         Route::get('/{id}', [StatusStudentController::class, 'show']);
+    });
+
+    // Rotas de Status de Agenda
+    Route::prefix('status-agenda')->group(function () {
+        Route::get('/', [StatusAgendaController::class, 'index']);
+        Route::get('/{id}', [StatusAgendaController::class, 'show']);
+    });
+
+    // Rotas de Clientes
+    Route::prefix('clients')->group(function () {
+        Route::get('/', [StudentController::class, 'clients'])->middleware('check.permission:students.view');
     });
 
     // Rotas de Alunos (com controle de permissões)
@@ -107,6 +133,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rotas de Agenda
     Route::prefix('agenda')->group(function () {
+        // Agenda completa (disponibilidades, bloqueios e agendamentos)
+        Route::get('/', [AppointmentController::class, 'getAgenda'])->middleware('check.permission:agenda.appointments.view');
+
         // Services
         Route::prefix('services')->group(function () {
             Route::get('/', [ServiceController::class, 'index'])->middleware('check.permission:agenda.services.view');
@@ -141,6 +170,25 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/batch', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
             Route::delete('/', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
             Route::delete('/{id}', [AppointmentController::class, 'destroy'])->middleware('check.permission:agenda.appointments.delete');
+        });
+
+        // Disponibilidades
+        Route::prefix('providers/{providerId}/availabilities')->group(function () {
+            Route::get('/', [AvailabilityController::class, 'index'])->middleware('check.permission:agenda.providers.view');
+            Route::post('/', [AvailabilityController::class, 'store'])->middleware('check.permission:agenda.providers.edit');
+            Route::post('/sync', [AvailabilityController::class, 'sync'])->middleware('check.permission:agenda.providers.edit');
+            Route::put('/{id}', [AvailabilityController::class, 'update'])->middleware('check.permission:agenda.providers.edit');
+            Route::patch('/{id}', [AvailabilityController::class, 'update'])->middleware('check.permission:agenda.providers.edit');
+            Route::delete('/{id}', [AvailabilityController::class, 'destroy'])->middleware('check.permission:agenda.providers.edit');
+        });
+
+        // Bloqueios
+        Route::prefix('providers/{providerId}/blocks')->group(function () {
+            Route::get('/', [BlockController::class, 'index'])->middleware('check.permission:agenda.providers.view');
+            Route::post('/', [BlockController::class, 'store'])->middleware('check.permission:agenda.providers.edit');
+            Route::put('/{id}', [BlockController::class, 'update'])->middleware('check.permission:agenda.providers.edit');
+            Route::patch('/{id}', [BlockController::class, 'update'])->middleware('check.permission:agenda.providers.edit');
+            Route::delete('/{id}', [BlockController::class, 'destroy'])->middleware('check.permission:agenda.providers.edit');
         });
     });
 
