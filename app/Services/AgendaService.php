@@ -346,6 +346,7 @@ class AgendaService
             $data['date_start'],
             $data['date_end']
         );
+        $data['status_agenda_id'] ?? 1; //agendado
 
         if (!empty($conflicts)) {
             throw new \Exception('Conflito de horário detectado', 422);

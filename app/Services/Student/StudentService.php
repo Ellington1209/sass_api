@@ -183,8 +183,12 @@ class StudentService
                 'files.upload',
                 'files.view',
                 'files.download',
+                'agenda.view',
+                'agenda.create',   
                 'agenda.services.view',
-                'agenda.services.create',               
+                'agenda.providers.view',
+                'agenda.appointments.view',
+                'agenda.appointments.create',
             ];
 
             foreach ($permissions as $permission) {

@@ -441,7 +441,66 @@ class PermissionSeeder extends Seeder
                 'module_id' => $moduleIds['agenda'],
                 'description' => 'Excluir agenda',
             ],
-           
+            [
+                'key' => 'agenda.providers.view',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Visualizar provedores na agenda',
+            ],
+            [
+                'key' => 'agenda.providers.create',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Criar provedores na agenda',
+            ],
+            [
+                'key' => 'agenda.providers.edit',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Editar provedores na agenda',
+            ],
+            [
+                'key' => 'agenda.providers.delete',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Excluir provedores na agenda',
+            ],
+            [
+                'key' => 'agenda.appointments.view',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Visualizar agendamentos',
+            ],
+            [
+                'key' => 'agenda.appointments.create',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Criar agendamentos',
+            ],
+            [
+                'key' => 'agenda.appointments.edit',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Editar agendamentos',
+            ],
+            [
+                'key' => 'agenda.appointments.delete',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Excluir agendamentos',
+            ],
+            [
+                'key' => 'agenda.services.view',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Visualizar serviços na agenda',
+            ],
+            [
+                'key' => 'agenda.services.create',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Criar serviços na agenda',
+            ],
+            [
+                'key' => 'agenda.services.edit',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Editar serviços na agenda',
+            ],
+            [
+                'key' => 'agenda.services.delete',
+                'module_id' => $moduleIds['agenda'],
+                'description' => 'Excluir serviços na agenda',
+            ],
 
             // ========== MÓDULO AUTO-ESCOLA ==========
             [
