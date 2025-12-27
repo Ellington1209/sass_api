@@ -22,7 +22,6 @@ class TransactionController
         $filters = $request->only([
             'type',
             'status',
-            'origin_id',
             'category_id',
             'payment_method_id',
             'start_date',
@@ -58,12 +57,10 @@ class TransactionController
             'type' => 'required|in:IN,OUT',
             'amount' => 'required|numeric|min:0.01',
             'description' => 'nullable|string|max:1000',
-            'origin_id' => 'required|exists:financial_origins,id',
             'category_id' => 'required|exists:financial_categories,id',
             'payment_method_id' => 'required|exists:payment_methods,id',
             'reference_type' => 'nullable|string|max:50',
             'reference_id' => 'nullable|integer',
-            'service_price_id' => 'nullable|exists:service_prices,id',
             'status' => 'nullable|in:PENDING,CONFIRMED,CANCELLED',
             'occurred_at' => 'nullable|date',
         ]);
@@ -78,74 +75,5 @@ class TransactionController
         }
     }
 
-    /**
-     * Atualiza uma transação
-     */
-    public function update(Request $request, int $id): JsonResponse
-    {
-        $validated = $request->validate([
-            'amount' => 'nullable|numeric|min:0.01',
-            'description' => 'nullable|string|max:1000',
-            'origin_id' => 'nullable|exists:financial_origins,id',
-            'category_id' => 'nullable|exists:financial_categories,id',
-            'payment_method_id' => 'nullable|exists:payment_methods,id',
-            'status' => 'nullable|in:PENDING,CONFIRMED,CANCELLED',
-            'occurred_at' => 'nullable|date',
-        ]);
-
-        $tenantId = $request->user()->tenant_id;
-
-        try {
-            $transaction = $this->transactionService->update($id, $tenantId, $validated);
-
-            if (!$transaction) {
-                return response()->json(['message' => 'Transação não encontrada'], 404);
-            }
-
-            return response()->json($transaction);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-    }
-
-    /**
-     * Cancela uma transação
-     */
-    public function cancel(Request $request, int $id): JsonResponse
-    {
-        $tenantId = $request->user()->tenant_id;
-
-        try {
-            $transaction = $this->transactionService->cancel($id, $tenantId);
-
-            if (!$transaction) {
-                return response()->json(['message' => 'Transação não encontrada'], 404);
-            }
-
-            return response()->json($transaction);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-    }
-
-    /**
-     * Deleta uma transação
-     */
-    public function destroy(Request $request, int $id): JsonResponse
-    {
-        $tenantId = $request->user()->tenant_id;
-
-        try {
-            $result = $this->transactionService->delete($id, $tenantId);
-
-            if (!$result) {
-                return response()->json(['message' => 'Transação não encontrada'], 404);
-            }
-
-            return response()->json(['message' => 'Transação deletada com sucesso']);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-    }
 }
 

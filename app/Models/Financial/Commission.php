@@ -20,18 +20,15 @@ class Commission extends Model
         'reference_type',
         'reference_id',
         'base_amount',
-        'commission_rate',
         'commission_amount',
         'status',
         'paid_at',
-        'payment_transaction_id',
     ];
 
     protected function casts(): array
     {
         return [
             'base_amount' => 'decimal:2',
-            'commission_rate' => 'decimal:2',
             'commission_amount' => 'decimal:2',
             'paid_at' => 'datetime',
         ];
@@ -50,11 +47,6 @@ class Commission extends Model
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(FinancialTransaction::class, 'transaction_id');
-    }
-
-    public function paymentTransaction(): BelongsTo
-    {
-        return $this->belongsTo(FinancialTransaction::class, 'payment_transaction_id');
     }
 
     /**

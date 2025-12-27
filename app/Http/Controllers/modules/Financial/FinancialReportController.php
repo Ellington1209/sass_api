@@ -64,6 +64,7 @@ class FinancialReportController
         $filters = $request->only([
             'provider_id',
             'status',
+            'category_id',
             'start_date',
             'end_date',
         ]);

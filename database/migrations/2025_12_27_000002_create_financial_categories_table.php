@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
             $table->string('name');
-            $table->enum('type', ['IN', 'OUT']);
+            $table->boolean('is_operational')->default(false);
             $table->boolean('active')->default(true);
             $table->timestamps();
             $table->softDeletes();

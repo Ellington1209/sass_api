@@ -22,7 +22,6 @@ class CommissionController
         $filters = $request->only([
             'provider_id',
             'status',
-            'origin_id',
         ]);
 
         $commissions = $this->commissionService->getAll($tenantId, $filters);
@@ -51,7 +50,6 @@ class CommissionController
     public function pay(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([
-            'origin_id' => 'required|exists:financial_origins,id',
             'category_id' => 'required|exists:financial_categories,id',
             'payment_method_id' => 'required|exists:payment_methods,id',
             'occurred_at' => 'nullable|date',

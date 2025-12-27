@@ -29,18 +29,18 @@ class FinancialReportService
         $expense = (clone $query)->where('type', 'OUT')->sum('amount');
         $balance = $income - $expense;
 
-        // Entradas por origem
-        $incomeByOrigin = FinancialTransaction::where('tenant_id', $tenantId)
+        // Entradas por categoria
+        $incomeByCategory = FinancialTransaction::where('tenant_id', $tenantId)
             ->where('type', 'IN')
             ->where('status', 'CONFIRMED')
             ->whereBetween('occurred_at', [$startDate, $endDate])
-            ->select('origin_id', DB::raw('SUM(amount) as total'))
-            ->groupBy('origin_id')
-            ->with('origin')
+            ->select('category_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('category_id')
+            ->with('category')
             ->get()
             ->map(function ($item) {
                 return [
-                    'origin' => $item->origin->name ?? 'N/A',
+                    'category' => $item->category->name ?? 'N/A',
                     'total' => (float) $item->total,
                 ];
             })->toArray();
@@ -84,7 +84,7 @@ class FinancialReportService
                 'commissions_pending' => (float) $commissionsPending,
                 'commissions_paid' => (float) $commissionsPaid,
             ],
-            'income_by_origin' => $incomeByOrigin,
+            'income_by_category' => $incomeByCategory,
             'expense_by_category' => $expenseByCategory,
         ];
     }
@@ -163,6 +163,12 @@ class FinancialReportService
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+
+        if (isset($filters['category_id'])) {
+            $query->whereHas('transaction', function($q) use ($filters) {
+                $q->where('category_id', $filters['category_id']);
+            });
         }
 
         if (isset($filters['start_date'])) {

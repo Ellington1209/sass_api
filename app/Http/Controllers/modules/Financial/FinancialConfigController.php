@@ -12,65 +12,12 @@ class FinancialConfigController
         private FinancialConfigService $configService
     ) {}
 
-    // ========== ORIGENS ==========
-
-    public function indexOrigins(Request $request): JsonResponse
-    {
-        $tenantId = $request->user()->tenant_id;
-        $filters = $request->only(['active', 'origin_type']);
-        $origins = $this->configService->getAllOrigins($tenantId, $filters);
-        return response()->json($origins);
-    }
-
-    public function storeOrigin(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'origin_type' => 'required|in:OPERATIONAL,MANUAL',
-            'active' => 'nullable|boolean',
-        ]);
-
-        $tenantId = $request->user()->tenant_id;
-        $origin = $this->configService->createOrigin($tenantId, $validated);
-        return response()->json($origin, 201);
-    }
-
-    public function updateOrigin(Request $request, int $id): JsonResponse
-    {
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'origin_type' => 'nullable|in:OPERATIONAL,MANUAL',
-            'active' => 'nullable|boolean',
-        ]);
-
-        $tenantId = $request->user()->tenant_id;
-        $origin = $this->configService->updateOrigin($id, $tenantId, $validated);
-
-        if (!$origin) {
-            return response()->json(['message' => 'Origem não encontrada'], 404);
-        }
-
-        return response()->json($origin);
-    }
-
-    public function destroyOrigin(Request $request, int $id): JsonResponse
-    {
-        $tenantId = $request->user()->tenant_id;
-        $result = $this->configService->deleteOrigin($id, $tenantId);
-
-        if (!$result) {
-            return response()->json(['message' => 'Origem não encontrada'], 404);
-        }
-
-        return response()->json(['message' => 'Origem deletada com sucesso']);
-    }
-
     // ========== CATEGORIAS ==========
 
     public function indexCategories(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
-        $filters = $request->only(['active', 'type']);
+        $filters = $request->only(['active']);
         $categories = $this->configService->getAllCategories($tenantId, $filters);
         return response()->json($categories);
     }
@@ -79,7 +26,7 @@ class FinancialConfigController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:IN,OUT',
+            'is_operational' => 'nullable|boolean',
             'active' => 'nullable|boolean',
         ]);
 
@@ -92,7 +39,7 @@ class FinancialConfigController
     {
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
-            'type' => 'nullable|in:IN,OUT',
+            'is_operational' => 'nullable|boolean',
             'active' => 'nullable|boolean',
         ]);
 
@@ -184,7 +131,6 @@ class FinancialConfigController
         $validated = $request->validate([
             'provider_id' => 'required|exists:providers,id',
             'service_id' => 'nullable|exists:services,id',
-            'origin_id' => 'nullable|exists:financial_origins,id',
             'commission_rate' => 'required|numeric|min:0|max:100',
             'active' => 'nullable|boolean',
         ]);

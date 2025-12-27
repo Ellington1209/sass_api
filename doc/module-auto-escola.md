@@ -13,3 +13,5 @@ service
 settings
 
 students
+
+financeiro

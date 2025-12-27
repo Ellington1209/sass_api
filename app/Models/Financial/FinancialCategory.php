@@ -16,13 +16,14 @@ class FinancialCategory extends Model
     protected $fillable = [
         'tenant_id',
         'name',
-        'type',
+        'is_operational',
         'active',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_operational' => 'boolean',
             'active' => 'boolean',
         ];
     }

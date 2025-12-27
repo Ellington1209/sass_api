@@ -25,86 +25,12 @@ class TransactionService
             }
 
             $transaction = FinancialTransaction::create($data);
-            $transaction->load(['origin', 'category', 'paymentMethod', 'creator', 'servicePrice']);
+            $transaction->load(['category', 'paymentMethod', 'creator']);
 
             return $this->formatTransaction($transaction);
         });
     }
 
-    /**
-     * Atualiza uma transação existente
-     */
-    public function update(int $id, int $tenantId, array $data): ?array
-    {
-        $transaction = FinancialTransaction::where('id', $id)
-            ->where('tenant_id', $tenantId)
-            ->first();
-
-        if (!$transaction) {
-            return null;
-        }
-
-        // Não permite editar transação cancelada
-        if ($transaction->status === 'CANCELLED') {
-            throw new \Exception('Não é possível editar uma transação cancelada');
-        }
-
-        $transaction->update($data);
-        $transaction->load(['origin', 'category', 'paymentMethod', 'creator', 'servicePrice']);
-
-        return $this->formatTransaction($transaction);
-    }
-
-    /**
-     * Cancela uma transação
-     */
-    public function cancel(int $id, int $tenantId): ?array
-    {
-        return DB::transaction(function () use ($id, $tenantId) {
-            $transaction = FinancialTransaction::where('id', $id)
-                ->where('tenant_id', $tenantId)
-                ->first();
-
-            if (!$transaction) {
-                return null;
-            }
-
-            if ($transaction->status === 'CANCELLED') {
-                throw new \Exception('Transação já está cancelada');
-            }
-
-            $transaction->update(['status' => 'CANCELLED']);
-
-            // Cancela comissões relacionadas
-            $transaction->commissions()->where('status', 'PENDING')->update(['status' => 'CANCELLED']);
-
-            $transaction->load(['origin', 'category', 'paymentMethod', 'creator', 'servicePrice']);
-
-            return $this->formatTransaction($transaction);
-        });
-    }
-
-    /**
-     * Deleta uma transação (soft delete)
-     */
-    public function delete(int $id, int $tenantId): bool
-    {
-        $transaction = FinancialTransaction::where('id', $id)
-            ->where('tenant_id', $tenantId)
-            ->first();
-
-        if (!$transaction) {
-            return false;
-        }
-
-        // Não permite deletar se tiver comissão paga vinculada
-        $hasPaidCommission = $transaction->commissions()->where('status', 'PAID')->exists();
-        if ($hasPaidCommission) {
-            throw new \Exception('Não é possível deletar transação com comissão paga');
-        }
-
-        return $transaction->delete();
-    }
 
     /**
      * Lista todas as transações
@@ -120,10 +46,6 @@ class TransactionService
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
-        }
-
-        if (isset($filters['origin_id'])) {
-            $query->where('origin_id', $filters['origin_id']);
         }
 
         if (isset($filters['category_id'])) {
@@ -142,7 +64,7 @@ class TransactionService
             $query->where('occurred_at', '<=', $filters['end_date']);
         }
 
-        $query->with(['origin', 'category', 'paymentMethod', 'creator', 'servicePrice'])
+        $query->with(['category', 'paymentMethod', 'creator'])
               ->orderBy('occurred_at', 'desc');
 
         $transactions = $query->get();
@@ -159,7 +81,7 @@ class TransactionService
     {
         $transaction = FinancialTransaction::where('id', $id)
             ->where('tenant_id', $tenantId)
-            ->with(['origin', 'category', 'paymentMethod', 'creator', 'servicePrice', 'commissions.provider.person.user'])
+            ->with(['category', 'paymentMethod', 'creator', 'commissions.provider.person.user'])
             ->first();
 
         if (!$transaction) {
@@ -181,15 +103,10 @@ class TransactionService
             'type_name' => $transaction->type_name,
             'amount' => (float) $transaction->amount,
             'description' => $transaction->description,
-            'origin' => $transaction->origin ? [
-                'id' => $transaction->origin->id,
-                'name' => $transaction->origin->name,
-                'origin_type' => $transaction->origin->origin_type,
-            ] : null,
             'category' => $transaction->category ? [
                 'id' => $transaction->category->id,
                 'name' => $transaction->category->name,
-                'type' => $transaction->category->type,
+                'is_operational' => $transaction->category->is_operational,
             ] : null,
             'payment_method' => $transaction->paymentMethod ? [
                 'id' => $transaction->paymentMethod->id,
@@ -197,7 +114,6 @@ class TransactionService
             ] : null,
             'reference_type' => $transaction->reference_type,
             'reference_id' => $transaction->reference_id,
-            'service_price_id' => $transaction->service_price_id,
             'status' => $transaction->status,
             'status_name' => $transaction->status_name,
             'occurred_at' => $transaction->occurred_at?->toISOString(),

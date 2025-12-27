@@ -14,12 +14,10 @@ return new class extends Migration
             $table->enum('type', ['IN', 'OUT']);
             $table->decimal('amount', 10, 2);
             $table->text('description')->nullable();
-            $table->foreignId('origin_id')->constrained('financial_origins')->onDelete('restrict');
             $table->foreignId('category_id')->constrained('financial_categories')->onDelete('restrict');
             $table->foreignId('payment_method_id')->constrained('payment_methods')->onDelete('restrict');
             $table->string('reference_type')->nullable();
             $table->bigInteger('reference_id')->nullable();
-            $table->foreignId('service_price_id')->nullable()->constrained('service_prices')->onDelete('set null');
             $table->enum('status', ['PENDING', 'CONFIRMED', 'CANCELLED'])->default('PENDING');
             $table->dateTime('occurred_at');
             $table->foreignId('created_by')->constrained('users')->onDelete('restrict');

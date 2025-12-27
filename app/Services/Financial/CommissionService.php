@@ -23,11 +23,10 @@ class CommissionService
         int $referenceId,
         ?int $serviceId = null
     ): ?Commission {
-        // Busca configuração de comissão (com hierarquia: service > origin > padrão)
-        $config = ProviderCommissionConfig::forProviderServiceAndOrigin(
+        // Busca configuração de comissão (com hierarquia: service > padrão)
+        $config = ProviderCommissionConfig::forProviderService(
             $providerId,
-            $serviceId,
-            $transaction->origin_id
+            $serviceId
         )->first();
 
         if (!$config) {
@@ -43,7 +42,6 @@ class CommissionService
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'base_amount' => $transaction->amount,
-            'commission_rate' => $config->commission_rate,
             'commission_amount' => $commissionAmount,
             'status' => 'PENDING',
         ]);
@@ -73,7 +71,6 @@ class CommissionService
                 'type' => 'OUT',
                 'amount' => $commission->commission_amount,
                 'description' => "Pagamento de comissão - {$providerName}",
-                'origin_id' => $paymentData['origin_id'],
                 'category_id' => $paymentData['category_id'],
                 'payment_method_id' => $paymentData['payment_method_id'],
                 'reference_type' => 'commission',
@@ -82,16 +79,15 @@ class CommissionService
                 'occurred_at' => $paymentData['occurred_at'] ?? now(),
             ];
 
-            $paymentTransaction = $this->transactionService->create($tenantId, $transactionData);
+            $this->transactionService->create($tenantId, $transactionData);
 
             // Atualiza a comissão
             $commission->update([
                 'status' => 'PAID',
                 'paid_at' => now(),
-                'payment_transaction_id' => $paymentTransaction['id'],
             ]);
 
-            $commission->load(['provider.person.user', 'transaction.origin', 'paymentTransaction']);
+            $commission->load(['provider.person.user', 'transaction.category']);
 
             return $this->formatCommission($commission);
         });
@@ -115,7 +111,7 @@ class CommissionService
         }
 
         $commission->update(['status' => 'CANCELLED']);
-        $commission->load(['provider.person.user', 'transaction.origin']);
+        $commission->load(['provider.person.user', 'transaction.category']);
 
         return $this->formatCommission($commission);
     }
@@ -136,13 +132,7 @@ class CommissionService
             $query->where('status', $filters['status']);
         }
 
-        if (isset($filters['origin_id'])) {
-            $query->whereHas('transaction', function($q) use ($filters) {
-                $q->where('origin_id', $filters['origin_id']);
-            });
-        }
-
-        $query->with(['provider.person.user', 'transaction.origin', 'paymentTransaction'])
+        $query->with(['provider.person.user', 'transaction.category'])
               ->orderBy('created_at', 'desc');
 
         $commissions = $query->get();
@@ -159,7 +149,7 @@ class CommissionService
     {
         $commission = Commission::where('id', $id)
             ->where('tenant_id', $tenantId)
-            ->with(['provider.person.user', 'transaction.origin', 'paymentTransaction'])
+            ->with(['provider.person.user', 'transaction.category'])
             ->first();
 
         if (!$commission) {
@@ -228,23 +218,18 @@ class CommissionService
                 'name' => $commission->provider->person->user->name ?? 'N/A',
             ],
             'transaction_id' => $commission->transaction_id,
-            'origin' => $commission->transaction->origin ? [
-                'id' => $commission->transaction->origin->id,
-                'name' => $commission->transaction->origin->name,
+            'category' => $commission->transaction->category ? [
+                'id' => $commission->transaction->category->id,
+                'name' => $commission->transaction->category->name,
+                'is_operational' => $commission->transaction->category->is_operational,
             ] : null,
             'reference_type' => $commission->reference_type,
             'reference_id' => $commission->reference_id,
             'base_amount' => (float) $commission->base_amount,
-            'commission_rate' => (float) $commission->commission_rate,
             'commission_amount' => (float) $commission->commission_amount,
             'status' => $commission->status,
             'status_name' => $commission->status_name,
             'paid_at' => $commission->paid_at?->toISOString(),
-            'payment_transaction' => $commission->paymentTransaction ? [
-                'id' => $commission->paymentTransaction->id,
-                'amount' => (float) $commission->paymentTransaction->amount,
-                'occurred_at' => $commission->paymentTransaction->occurred_at?->toISOString(),
-            ] : null,
             'created_at' => $commission->created_at?->toISOString(),
             'updated_at' => $commission->updated_at?->toISOString(),
         ];

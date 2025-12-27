@@ -21,12 +21,10 @@ class FinancialTransaction extends Model
         'type',
         'amount',
         'description',
-        'origin_id',
         'category_id',
         'payment_method_id',
         'reference_type',
         'reference_id',
-        'service_price_id',
         'status',
         'occurred_at',
         'created_by',
@@ -45,11 +43,6 @@ class FinancialTransaction extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    public function origin(): BelongsTo
-    {
-        return $this->belongsTo(FinancialOrigin::class, 'origin_id');
-    }
-
     public function category(): BelongsTo
     {
         return $this->belongsTo(FinancialCategory::class, 'category_id');
@@ -58,11 +51,6 @@ class FinancialTransaction extends Model
     public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
-    }
-
-    public function servicePrice(): BelongsTo
-    {
-        return $this->belongsTo(ServicePrice::class, 'service_price_id');
     }
 
     public function creator(): BelongsTo
@@ -75,10 +63,6 @@ class FinancialTransaction extends Model
         return $this->hasMany(Commission::class, 'transaction_id');
     }
 
-    public function commissionsPayments(): HasMany
-    {
-        return $this->hasMany(Commission::class, 'payment_transaction_id');
-    }
 
     /**
      * Accessor para formatar o tipo de forma legível

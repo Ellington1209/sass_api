@@ -18,7 +18,6 @@ class ProviderCommissionConfig extends Model
         'tenant_id',
         'provider_id',
         'service_id',
-        'origin_id',
         'commission_rate',
         'active',
     ];
@@ -46,11 +45,6 @@ class ProviderCommissionConfig extends Model
         return $this->belongsTo(Service::class);
     }
 
-    public function origin(): BelongsTo
-    {
-        return $this->belongsTo(FinancialOrigin::class, 'origin_id');
-    }
-
     /**
      * Scope para filtrar configs ativas
      */
@@ -60,53 +54,27 @@ class ProviderCommissionConfig extends Model
     }
 
     /**
-     * Scope para buscar config por provider, service e origin
+     * Scope para buscar config por provider e service
      * Hierarquia de prioridade:
-     * 1. provider + service + origin (mais específica)
-     * 2. provider + service (sem origin)
-     * 3. provider + origin (sem service)
-     * 4. provider apenas (padrão)
+     * 1. provider + service (mais específica)
+     * 2. provider apenas (padrão)
      */
-    public function scopeForProviderServiceAndOrigin($query, int $providerId, ?int $serviceId = null, ?int $originId = null)
+    public function scopeForProviderService($query, int $providerId, ?int $serviceId = null)
     {
         return $query->where('provider_id', $providerId)
             ->where('active', true)
-            ->where(function($q) use ($serviceId, $originId) {
-                // Busca configs que se aplicam (service_id match ou NULL, origin_id match ou NULL)
-                $q->where(function($subQ) use ($serviceId, $originId) {
-                    // Config específica: service + origin
-                    if ($serviceId && $originId) {
-                        $subQ->where(function($s) use ($serviceId, $originId) {
-                            $s->where('service_id', $serviceId)->where('origin_id', $originId);
-                        });
-                    }
-                    // Config por service apenas
-                    if ($serviceId) {
-                        $subQ->orWhere(function($s) use ($serviceId) {
-                            $s->where('service_id', $serviceId)->whereNull('origin_id');
-                        });
-                    }
-                    // Config por origin apenas
-                    if ($originId) {
-                        $subQ->orWhere(function($s) use ($originId) {
-                            $s->whereNull('service_id')->where('origin_id', $originId);
-                        });
-                    }
-                    // Config padrão (sem service e sem origin)
-                    $subQ->orWhere(function($s) {
-                        $s->whereNull('service_id')->whereNull('origin_id');
-                    });
-                });
+            ->where(function($q) use ($serviceId) {
+                if ($serviceId) {
+                    // Busca config específica do service ou padrão
+                    $q->where('service_id', $serviceId)
+                      ->orWhereNull('service_id');
+                } else {
+                    // Busca apenas config padrão
+                    $q->whereNull('service_id');
+                }
             })
             // Ordena por especificidade: mais específica primeiro
-            ->orderByRaw('
-                CASE 
-                    WHEN service_id IS NOT NULL AND origin_id IS NOT NULL THEN 1
-                    WHEN service_id IS NOT NULL THEN 2
-                    WHEN origin_id IS NOT NULL THEN 3
-                    ELSE 4
-                END ASC
-            ');
+            ->orderByRaw('CASE WHEN service_id IS NOT NULL THEN 1 ELSE 2 END ASC');
     }
 }
 

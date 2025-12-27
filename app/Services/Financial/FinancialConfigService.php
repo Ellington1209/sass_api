@@ -3,67 +3,11 @@
 namespace App\Services\Financial;
 
 use App\Models\Financial\FinancialCategory;
-use App\Models\Financial\FinancialOrigin;
 use App\Models\Financial\PaymentMethod;
 use App\Models\Financial\ProviderCommissionConfig;
 
 class FinancialConfigService
 {
-    // ========== ORIGENS ==========
-
-    public function createOrigin(int $tenantId, array $data): array
-    {
-        $data['tenant_id'] = $tenantId;
-        $origin = FinancialOrigin::create($data);
-        return $this->formatOrigin($origin);
-    }
-
-    public function updateOrigin(int $id, int $tenantId, array $data): ?array
-    {
-        $origin = FinancialOrigin::where('id', $id)
-            ->where('tenant_id', $tenantId)
-            ->first();
-
-        if (!$origin) {
-            return null;
-        }
-
-        $origin->update($data);
-        return $this->formatOrigin($origin);
-    }
-
-    public function deleteOrigin(int $id, int $tenantId): bool
-    {
-        $origin = FinancialOrigin::where('id', $id)
-            ->where('tenant_id', $tenantId)
-            ->first();
-
-        if (!$origin) {
-            return false;
-        }
-
-        return $origin->delete();
-    }
-
-    public function getAllOrigins(int $tenantId, ?array $filters = null): array
-    {
-        $query = FinancialOrigin::where('tenant_id', $tenantId);
-
-        if (isset($filters['active'])) {
-            $query->where('active', $filters['active']);
-        }
-
-        if (isset($filters['origin_type'])) {
-            $query->where('origin_type', $filters['origin_type']);
-        }
-
-        $origins = $query->orderBy('name')->get();
-
-        return $origins->map(function ($origin) {
-            return $this->formatOrigin($origin);
-        })->toArray();
-    }
-
     // ========== CATEGORIAS ==========
 
     public function createCategory(int $tenantId, array $data): array
@@ -106,10 +50,6 @@ class FinancialConfigService
 
         if (isset($filters['active'])) {
             $query->where('active', $filters['active']);
-        }
-
-        if (isset($filters['type'])) {
-            $query->where('type', $filters['type']);
         }
 
         $categories = $query->orderBy('name')->get();
@@ -176,7 +116,7 @@ class FinancialConfigService
     {
         $data['tenant_id'] = $tenantId;
         $config = ProviderCommissionConfig::create($data);
-        $config->load(['provider.person.user', 'origin']);
+        $config->load(['provider.person.user', 'service']);
         return $this->formatCommissionConfig($config);
     }
 
@@ -191,7 +131,7 @@ class FinancialConfigService
         }
 
         $config->update($data);
-        $config->load(['provider.person.user', 'origin']);
+        $config->load(['provider.person.user', 'service']);
         return $this->formatCommissionConfig($config);
     }
 
@@ -233,7 +173,7 @@ class FinancialConfigService
             });
         }
 
-        $configs = $query->with(['provider.person.user', 'service', 'origin'])
+        $configs = $query->with(['provider.person.user', 'service'])
             ->orderBy('provider_id')
             ->get();
 
@@ -244,26 +184,13 @@ class FinancialConfigService
 
     // ========== FORMATADORES ==========
 
-    private function formatOrigin(FinancialOrigin $origin): array
-    {
-        return [
-            'id' => $origin->id,
-            'tenant_id' => $origin->tenant_id,
-            'name' => $origin->name,
-            'origin_type' => $origin->origin_type,
-            'active' => $origin->active,
-            'created_at' => $origin->created_at?->toISOString(),
-            'updated_at' => $origin->updated_at?->toISOString(),
-        ];
-    }
-
     private function formatCategory(FinancialCategory $category): array
     {
         return [
             'id' => $category->id,
             'tenant_id' => $category->tenant_id,
             'name' => $category->name,
-            'type' => $category->type,
+            'is_operational' => $category->is_operational,
             'active' => $category->active,
             'created_at' => $category->created_at?->toISOString(),
             'updated_at' => $category->updated_at?->toISOString(),
@@ -294,10 +221,6 @@ class FinancialConfigService
             'service' => $config->service ? [
                 'id' => $config->service->id,
                 'name' => $config->service->name,
-            ] : null,
-            'origin' => $config->origin ? [
-                'id' => $config->origin->id,
-                'name' => $config->origin->name,
             ] : null,
             'commission_rate' => (float) $config->commission_rate,
             'active' => $config->active,

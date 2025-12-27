@@ -220,10 +220,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [TransactionController::class, 'index'])->middleware('check.permission:financeiro.transactions.view');
             Route::get('/{id}', [TransactionController::class, 'show'])->middleware('check.permission:financeiro.transactions.view');
             Route::post('/', [TransactionController::class, 'store'])->middleware('check.permission:financeiro.transactions.create');
-            Route::put('/{id}', [TransactionController::class, 'update'])->middleware('check.permission:financeiro.transactions.edit');
-            Route::patch('/{id}', [TransactionController::class, 'update'])->middleware('check.permission:financeiro.transactions.edit');
-            Route::post('/{id}/cancel', [TransactionController::class, 'cancel'])->middleware('check.permission:financeiro.transactions.cancel');
-            Route::delete('/{id}', [TransactionController::class, 'destroy'])->middleware('check.permission:financeiro.transactions.delete');
         });
 
         // Comissões
@@ -233,15 +229,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/pay', [CommissionController::class, 'pay'])->middleware('check.permission:financeiro.commissions.pay');
             Route::post('/{id}/cancel', [CommissionController::class, 'cancel'])->middleware('check.permission:financeiro.commissions.cancel');
             Route::get('/totals/by-provider', [CommissionController::class, 'totalsByProvider'])->middleware('check.permission:financeiro.commissions.view');
-        });
-
-        // Configurações - Origens
-        Route::prefix('origins')->group(function () {
-            Route::get('/', [FinancialConfigController::class, 'indexOrigins'])->middleware('check.permission:financeiro.origins.view');
-            Route::post('/', [FinancialConfigController::class, 'storeOrigin'])->middleware('check.permission:financeiro.origins.create');
-            Route::put('/{id}', [FinancialConfigController::class, 'updateOrigin'])->middleware('check.permission:financeiro.origins.edit');
-            Route::patch('/{id}', [FinancialConfigController::class, 'updateOrigin'])->middleware('check.permission:financeiro.origins.edit');
-            Route::delete('/{id}', [FinancialConfigController::class, 'destroyOrigin'])->middleware('check.permission:financeiro.origins.delete');
         });
 
         // Configurações - Categorias

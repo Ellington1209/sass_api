@@ -345,28 +345,6 @@ class PermissionSeeder extends Seeder
                 'description' => 'Cancelar comissões',
             ],
 
-            // Configurações Financeiras - Origens
-            [
-                'key' => 'financeiro.origins.view',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Visualizar origens financeiras',
-            ],
-            [
-                'key' => 'financeiro.origins.create',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Criar origens financeiras',
-            ],
-            [
-                'key' => 'financeiro.origins.edit',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Editar origens financeiras',
-            ],
-            [
-                'key' => 'financeiro.origins.delete',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Excluir origens financeiras',
-            ],
-
             // Configurações Financeiras - Categorias
             [
                 'key' => 'financeiro.categories.view',

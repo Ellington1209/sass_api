@@ -12,14 +12,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
             $table->foreignId('provider_id')->constrained('providers')->onDelete('cascade');
-            $table->foreignId('origin_id')->nullable()->constrained('financial_origins')->onDelete('cascade');
             $table->decimal('commission_rate', 5, 2);
             $table->boolean('active')->default(true);
             $table->timestamps();
             $table->softDeletes();
 
-            // Garantir unicidade: um provider só pode ter uma config por origin
-            $table->unique(['tenant_id', 'provider_id', 'origin_id'], 'unique_provider_origin_config');
+            // Garantir unicidade: um provider só pode ter uma config padrão
+            $table->unique(['tenant_id', 'provider_id'], 'unique_provider_config');
         });
     }
 

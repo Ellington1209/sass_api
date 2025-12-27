@@ -10,14 +10,14 @@ return new class extends Migration
     {
         Schema::table('provider_commission_configs', function (Blueprint $table) {
             // Remove a constraint única antiga
-            $table->dropUnique('unique_provider_origin_config');
+            $table->dropUnique('unique_provider_config');
             
             // Adiciona service_id
             $table->foreignId('service_id')->nullable()->after('provider_id')->constrained('services')->onDelete('cascade');
             
-            // Nova constraint única: provider + service + origin (permitindo NULLs)
-            // Um provider pode ter uma config por combinação de service/origin
-            $table->unique(['tenant_id', 'provider_id', 'service_id', 'origin_id'], 'unique_provider_service_origin_config');
+            // Nova constraint única: provider + service (permitindo NULLs)
+            // Um provider pode ter uma config por service ou uma config padrão (sem service)
+            $table->unique(['tenant_id', 'provider_id', 'service_id'], 'unique_provider_service_config');
         });
     }
 

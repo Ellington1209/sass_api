@@ -16,11 +16,9 @@ return new class extends Migration
             $table->string('reference_type');
             $table->bigInteger('reference_id');
             $table->decimal('base_amount', 10, 2);
-            $table->decimal('commission_rate', 5, 2);
             $table->decimal('commission_amount', 10, 2);
             $table->enum('status', ['PENDING', 'PAID', 'CANCELLED'])->default('PENDING');
             $table->dateTime('paid_at')->nullable();
-            $table->foreignId('payment_transaction_id')->nullable()->constrained('financial_transactions')->onDelete('set null');
             $table->timestamps();
             $table->softDeletes();
 
