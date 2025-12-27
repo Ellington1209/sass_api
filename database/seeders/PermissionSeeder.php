@@ -284,55 +284,160 @@ class PermissionSeeder extends Seeder
             ],
 
             // ========== MÓDULO FINANCEIRO ==========
+            // Dashboard e Visualizações
             [
                 'key' => 'financeiro.view',
                 'module_id' => $moduleIds['financeiro'],
                 'description' => 'Visualizar dashboard financeiro',
             ],
             [
-                'key' => 'financeiro.transacoes',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Ver transações',
-            ],
-            [
-                'key' => 'financeiro.relatorios',
+                'key' => 'financeiro.reports.view',
                 'module_id' => $moduleIds['financeiro'],
                 'description' => 'Ver relatórios financeiros',
             ],
             [
-                'key' => 'financeiro.transacoes.create',
+                'key' => 'financeiro.reports.export',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Exportar relatórios financeiros',
+            ],
+
+            // Transações
+            [
+                'key' => 'financeiro.transactions.view',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Visualizar transações',
+            ],
+            [
+                'key' => 'financeiro.transactions.create',
                 'module_id' => $moduleIds['financeiro'],
                 'description' => 'Criar transações',
             ],
             [
-                'key' => 'financeiro.transacoes.edit',
+                'key' => 'financeiro.transactions.edit',
                 'module_id' => $moduleIds['financeiro'],
                 'description' => 'Editar transações',
             ],
             [
-                'key' => 'financeiro.transacoes.delete',
+                'key' => 'financeiro.transactions.delete',
                 'module_id' => $moduleIds['financeiro'],
                 'description' => 'Excluir transações',
             ],
             [
-                'key' => 'financeiro.manage',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Permissão completa financeira (todas as ações acima)',
-            ],
-            [
-                'key' => 'financeiro.approve',
-                'module_id' => $moduleIds['financeiro'],
-                'description' => 'Aprovar transações',
-            ],
-            [
-                'key' => 'financeiro.cancel',
+                'key' => 'financeiro.transactions.cancel',
                 'module_id' => $moduleIds['financeiro'],
                 'description' => 'Cancelar transações',
             ],
+
+            // Comissões
             [
-                'key' => 'financeiro.reports.export',
+                'key' => 'financeiro.commissions.view',
                 'module_id' => $moduleIds['financeiro'],
-                'description' => 'Exportar relatórios',
+                'description' => 'Visualizar comissões',
+            ],
+            [
+                'key' => 'financeiro.commissions.pay',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Pagar comissões',
+            ],
+            [
+                'key' => 'financeiro.commissions.cancel',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Cancelar comissões',
+            ],
+
+            // Configurações Financeiras - Origens
+            [
+                'key' => 'financeiro.origins.view',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Visualizar origens financeiras',
+            ],
+            [
+                'key' => 'financeiro.origins.create',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Criar origens financeiras',
+            ],
+            [
+                'key' => 'financeiro.origins.edit',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Editar origens financeiras',
+            ],
+            [
+                'key' => 'financeiro.origins.delete',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Excluir origens financeiras',
+            ],
+
+            // Configurações Financeiras - Categorias
+            [
+                'key' => 'financeiro.categories.view',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Visualizar categorias financeiras',
+            ],
+            [
+                'key' => 'financeiro.categories.create',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Criar categorias financeiras',
+            ],
+            [
+                'key' => 'financeiro.categories.edit',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Editar categorias financeiras',
+            ],
+            [
+                'key' => 'financeiro.categories.delete',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Excluir categorias financeiras',
+            ],
+
+            // Configurações Financeiras - Métodos de Pagamento
+            [
+                'key' => 'financeiro.payment_methods.view',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Visualizar métodos de pagamento',
+            ],
+            [
+                'key' => 'financeiro.payment_methods.create',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Criar métodos de pagamento',
+            ],
+            [
+                'key' => 'financeiro.payment_methods.edit',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Editar métodos de pagamento',
+            ],
+            [
+                'key' => 'financeiro.payment_methods.delete',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Excluir métodos de pagamento',
+            ],
+
+            // Configurações de Comissão
+            [
+                'key' => 'financeiro.commission_configs.view',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Visualizar configurações de comissão',
+            ],
+            [
+                'key' => 'financeiro.commission_configs.create',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Criar configurações de comissão',
+            ],
+            [
+                'key' => 'financeiro.commission_configs.edit',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Editar configurações de comissão',
+            ],
+            [
+                'key' => 'financeiro.commission_configs.delete',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Excluir configurações de comissão',
+            ],
+
+            // Permissão Completa
+            [
+                'key' => 'financeiro.manage',
+                'module_id' => $moduleIds['financeiro'],
+                'description' => 'Permissão completa no módulo financeiro (todas as ações acima)',
             ],
 
             // ========== MÓDULO ALUNOS ==========

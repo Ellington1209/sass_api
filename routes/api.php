@@ -17,6 +17,10 @@ use App\Http\Controllers\modules\Student\StatusStudentController;
 use App\Http\Controllers\modules\Student\StudentController;
 use App\Http\Controllers\modules\User\UserController;
 use App\Http\Controllers\modules\WhatsApp\WhatsappInstanceController;
+use App\Http\Controllers\modules\Financial\CommissionController;
+use App\Http\Controllers\modules\Financial\FinancialConfigController;
+use App\Http\Controllers\modules\Financial\FinancialReportController;
+use App\Http\Controllers\modules\Financial\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 // Rotas públicas (sem autenticação)
@@ -199,6 +203,72 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', [WhatsappInstanceController::class, 'store'])->middleware('check.permission:whatsapp.instances.create');
             Route::post('/{id}/send', [WhatsappInstanceController::class, 'send'])->middleware('check.permission:whatsapp.instances.send');
             Route::delete('/{id}', [WhatsappInstanceController::class, 'destroy'])->middleware('check.permission:whatsapp.instances.delete');
+        });
+    });
+
+    // Rotas do Financeiro
+    Route::prefix('financial')->group(function () {
+        // Dashboard e Relatórios
+        Route::prefix('reports')->group(function () {
+            Route::get('/dashboard', [FinancialReportController::class, 'dashboard'])->middleware('check.permission:financeiro.view');
+            Route::get('/cash-flow', [FinancialReportController::class, 'cashFlow'])->middleware('check.permission:financeiro.reports.view');
+            Route::get('/commissions', [FinancialReportController::class, 'commissionsReport'])->middleware('check.permission:financeiro.reports.view');
+        });
+
+        // Transações
+        Route::prefix('transactions')->group(function () {
+            Route::get('/', [TransactionController::class, 'index'])->middleware('check.permission:financeiro.transactions.view');
+            Route::get('/{id}', [TransactionController::class, 'show'])->middleware('check.permission:financeiro.transactions.view');
+            Route::post('/', [TransactionController::class, 'store'])->middleware('check.permission:financeiro.transactions.create');
+            Route::put('/{id}', [TransactionController::class, 'update'])->middleware('check.permission:financeiro.transactions.edit');
+            Route::patch('/{id}', [TransactionController::class, 'update'])->middleware('check.permission:financeiro.transactions.edit');
+            Route::post('/{id}/cancel', [TransactionController::class, 'cancel'])->middleware('check.permission:financeiro.transactions.cancel');
+            Route::delete('/{id}', [TransactionController::class, 'destroy'])->middleware('check.permission:financeiro.transactions.delete');
+        });
+
+        // Comissões
+        Route::prefix('commissions')->group(function () {
+            Route::get('/', [CommissionController::class, 'index'])->middleware('check.permission:financeiro.commissions.view');
+            Route::get('/{id}', [CommissionController::class, 'show'])->middleware('check.permission:financeiro.commissions.view');
+            Route::post('/{id}/pay', [CommissionController::class, 'pay'])->middleware('check.permission:financeiro.commissions.pay');
+            Route::post('/{id}/cancel', [CommissionController::class, 'cancel'])->middleware('check.permission:financeiro.commissions.cancel');
+            Route::get('/totals/by-provider', [CommissionController::class, 'totalsByProvider'])->middleware('check.permission:financeiro.commissions.view');
+        });
+
+        // Configurações - Origens
+        Route::prefix('origins')->group(function () {
+            Route::get('/', [FinancialConfigController::class, 'indexOrigins'])->middleware('check.permission:financeiro.origins.view');
+            Route::post('/', [FinancialConfigController::class, 'storeOrigin'])->middleware('check.permission:financeiro.origins.create');
+            Route::put('/{id}', [FinancialConfigController::class, 'updateOrigin'])->middleware('check.permission:financeiro.origins.edit');
+            Route::patch('/{id}', [FinancialConfigController::class, 'updateOrigin'])->middleware('check.permission:financeiro.origins.edit');
+            Route::delete('/{id}', [FinancialConfigController::class, 'destroyOrigin'])->middleware('check.permission:financeiro.origins.delete');
+        });
+
+        // Configurações - Categorias
+        Route::prefix('categories')->group(function () {
+            Route::get('/', [FinancialConfigController::class, 'indexCategories'])->middleware('check.permission:financeiro.categories.view');
+            Route::post('/', [FinancialConfigController::class, 'storeCategory'])->middleware('check.permission:financeiro.categories.create');
+            Route::put('/{id}', [FinancialConfigController::class, 'updateCategory'])->middleware('check.permission:financeiro.categories.edit');
+            Route::patch('/{id}', [FinancialConfigController::class, 'updateCategory'])->middleware('check.permission:financeiro.categories.edit');
+            Route::delete('/{id}', [FinancialConfigController::class, 'destroyCategory'])->middleware('check.permission:financeiro.categories.delete');
+        });
+
+        // Configurações - Métodos de Pagamento
+        Route::prefix('payment-methods')->group(function () {
+            Route::get('/', [FinancialConfigController::class, 'indexPaymentMethods'])->middleware('check.permission:financeiro.payment_methods.view');
+            Route::post('/', [FinancialConfigController::class, 'storePaymentMethod'])->middleware('check.permission:financeiro.payment_methods.create');
+            Route::put('/{id}', [FinancialConfigController::class, 'updatePaymentMethod'])->middleware('check.permission:financeiro.payment_methods.edit');
+            Route::patch('/{id}', [FinancialConfigController::class, 'updatePaymentMethod'])->middleware('check.permission:financeiro.payment_methods.edit');
+            Route::delete('/{id}', [FinancialConfigController::class, 'destroyPaymentMethod'])->middleware('check.permission:financeiro.payment_methods.delete');
+        });
+
+        // Configurações - Comissões
+        Route::prefix('commission-configs')->group(function () {
+            Route::get('/', [FinancialConfigController::class, 'indexCommissionConfigs'])->middleware('check.permission:financeiro.commission_configs.view');
+            Route::post('/', [FinancialConfigController::class, 'storeCommissionConfig'])->middleware('check.permission:financeiro.commission_configs.create');
+            Route::put('/{id}', [FinancialConfigController::class, 'updateCommissionConfig'])->middleware('check.permission:financeiro.commission_configs.edit');
+            Route::patch('/{id}', [FinancialConfigController::class, 'updateCommissionConfig'])->middleware('check.permission:financeiro.commission_configs.edit');
+            Route::delete('/{id}', [FinancialConfigController::class, 'destroyCommissionConfig'])->middleware('check.permission:financeiro.commission_configs.delete');
         });
     });
 });
